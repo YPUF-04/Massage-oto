@@ -8,7 +8,7 @@ Musterilere WhatsApp ve Telegram uzerinden otomatik, rastgele fotograf ve mesaj 
 - **Telegram**: Resmi Bot API, tamamen ucretsiz ve ban riski yok.
 - **3 zamanlama dilimi** (sabah/ogle/aksam): her biri icin ayri saat, musteri sayisi, musteri basina fotograf sayisi ve platform (WhatsApp/Telegram) secimi.
 - **Tekrarsiz rastgele gonderim**: Bir musteriye once gonderilen fotograf tekrar gonderilmez.
-- **Otomatik arsivleme**: Aktif havuzdaki tum fotograflar tum musterilere gonderildiginde, o havuz arsive tasinir (dosyalar `uploads/archive/batch-<id>/` icine), yeni fotograf yuklemen icin bos bir aktif havuz olusur.
+- **Otomatik arsivleme**: Aktif havuzdaki tum fotograflar tum musterilere gonderildiginde, o havuz arsive tasinir (dosyalar `storage/uploads/archive/batch-<id>/` icine), yeni fotograf yuklemen icin bos bir aktif havuz olusur.
 - **Platform bazli mesaj sablonlari**: WhatsApp ve Telegram icin ayri ayri, rastgele secilen indirim/bilgi metinleri (fotografin altina caption olarak eklenir).
 - **Ban riskini dusurme ayarlari**: gonderimler arasi rastgele gecikme, gunluk gonderim tavani, yeni WhatsApp numarasi icin "isinma modu" (ilk gunler daha az mesaj).
 - **Admin paneli**: Sifre korumali web paneli; WhatsApp QR baglama, musteri yonetimi, fotograf yukleme, zamanlama ve mesaj sablonu ayarlari, gonderim gecmisi hepsi buradan.
@@ -43,7 +43,7 @@ Tarayicida `http://localhost:3000` adresini ac, `.env` icindeki ADMIN_USERNAME/A
 
 1. Panelde "Panel" (Dashboard) sekmesinde "Baglan / QR goster" butonuna tikla.
 2. Cikan QR kodu telefonundaki WhatsApp > Ayarlar > Baglı Cihazlar > Cihaz Baglama ile okut.
-3. Baglanti kurulunca durum "connected" olarak gorunur ve oturum `data/baileys_auth/` icinde saklanir (yeniden baslatmada tekrar QR okutmana gerek kalmaz).
+3. Baglanti kurulunca durum "connected" olarak gorunur ve oturum `storage/data/baileys_auth/` icinde saklanir (yeniden baslatmada tekrar QR okutmana gerek kalmaz).
 
 ## Musteri Ekleme
 
@@ -54,7 +54,7 @@ Panelin "Musteriler" sekmesinden isim, WhatsApp numarasi (ulke kodu ile, orn. `9
 - "Fotograflar" sekmesinden istedigin kadar fotografi aktif havuza yukle (orn. 500 fotograf).
 - Sistem her zamanlama caliştiginda, o slotun ayarlarina gore (kac musteri, musteri basina kac fotograf) rastgele ve o musteriye daha once gonderilmemis fotograflari secer ve gonderir.
 - Bir musteri havuzdaki tum fotograflari aldiginda o musteri icin "tamamlandi" isaretlenir.
-- **Tum aktif musteriler** havuzdaki tum fotograflari aldiginda, havuz otomatik olarak `uploads/archive/batch-<id>/` klasorune tasinir ve arsivlenmis olarak isaretlenir; yeni, bos bir aktif havuz olusur. Bu noktada yeni fotograflarini yukleyebilirsin.
+- **Tum aktif musteriler** havuzdaki tum fotograflari aldiginda, havuz otomatik olarak `storage/uploads/archive/batch-<id>/` klasorune tasinir ve arsivlenmis olarak isaretlenir; yeni, bos bir aktif havuz olusur. Bu noktada yeni fotograflarini yukleyebilirsin.
 - Panelin "Panel" sekmesinde aktif havuzun ilerlemesini (hangi musteriye kac fotograf gitti) canli olarak gorebilirsin.
 
 ## Zamanlama Ayarlari
@@ -81,17 +81,62 @@ Degisiklikler aninda etkili olur, sunucuyu yeniden baslatmana gerek yok. "Panel"
 - Isinma modu (yeni baglanan WhatsApp numarasi icin ilk N gun daha dusuk gunluk limit)
 - Admin bildirim icin Telegram chat id'si (botuna `/myid` yazarak kendi chat id'ni ogrenebilirsin)
 
-## Railway'e Deploy
+## Railway'e Deploy: Senin Yapman Gerekenler
 
-1. Bu repoyu Railway'de yeni bir proje olarak baglat (GitHub repo'yu sec).
-2. Railway projesine bir **Volume** ekle ve `/app/data` ile `/app/uploads` klasorlerine mount et (WhatsApp oturumu, veritabani ve fotograflarin kalici olmasi icin bu sart; volume olmadan her deploy'da hepsi silinir).
-3. Environment Variables kismina `.env.example` dosyasindaki degiskenleri gercek degerlerle ekle (`ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `TELEGRAM_BOT_TOKEN`, `PORT` Railway tarafindan otomatik atanir).
-4. Deploy sonrasi Railway'in verdigi domain uzerinden panele giris yap, WhatsApp QR'i okut, musterilerini ve ayarlarini gir.
+Kod hazir. Asagidaki adimlar **sadece sende** yapilabilir (hesabin, sifren, token'in icerir). Bunlar disinda hicbir sey yapman gerekmez.
+
+```
+[Sen]                                    [Railway]
+  |                                          |
+  | 1. GitHub ile giris yap ---------------> |
+  | 2. "New Project" -> "Deploy from        |
+  |    GitHub repo" -> Massage-oto sec ----> | proje olusur
+  | 3. Settings -> Volumes -> "New Volume"  |
+  |    Mount Path: /app/storage -----------> | kalici depo hazir
+  | 4. Variables -> asagidaki 4 degeri gir ->| degerler kaydedilir
+  | 5. Settings -> Networking ->             |
+  |    "Generate Domain" ------------------> | adres olusur
+  |                                          v
+  |                                      otomatik deploy
+  |                                          |
+  | 6. Adrese gir, panelde giris yap,       |
+  |    WhatsApp QR'i telefonla okut  <------ |
+```
+
+### 1. Adim: Railway'de proje ac
+railway.app adresine gir, GitHub hesabinla giris yap. "New Project" -> "Deploy from GitHub repo" -> `Massage-oto` reposunu sec.
+
+### 2. Adim: Kalici depo (Volume) ekle
+Bu adim sart. Yoksa her deploy'da WhatsApp baglantisi ve fotograflar silinir.
+- Projede Settings -> Volumes -> "New Volume"
+- Mount Path alanina tam olarak sunu yaz: `/app/storage`
+- Kaydet.
+
+### 3. Adim: Degiskenleri (Variables) gir
+Settings -> Variables kismina bu 4 degeri ekle:
+
+| Isim | Deger |
+|---|---|
+| `ADMIN_USERNAME` | kendi sectigin bir kullanici adi (orn. `admin`) |
+| `ADMIN_PASSWORD` | kendi sectigin guclu bir sifre |
+| `SESSION_SECRET` | rastgele, uzun bir metin (orn. 30 karakter, klavyeden rastgele yaz) |
+| `TELEGRAM_BOT_TOKEN` | BotFather'dan aldigin token (asagida anlatiliyor) |
+
+`PORT` degiskenini Railway kendisi verir, sen eklemezsin.
+
+### 4. Adim: Adres (domain) olustur
+Settings -> Networking -> "Generate Domain". Sana bir adres verir (orn. `massage-oto.up.railway.app`).
+
+### 5. Adim: Panele gir ve WhatsApp'i bagla
+O adrese tarayicidan gir. 3. adimda yazdigin kullanici adi/sifre ile giris yap. "Panel" sekmesinde "Baglan / QR goster" butonuna tikla, cikan kodu telefonundaki WhatsApp > Baglı Cihazlar ile okut.
+
+Bundan sonrasi (musteri ekleme, fotograf yukleme, zamanlama ayari) panelin icinden yapilir, baska bir kurulum gerekmez.
 
 ## Mimari (kisaca)
 
 ```
 src/
+  paths.js                 Kalici depo yollari (storage/data, storage/uploads)
   db.js                  SQLite semasi ve varsayilan veriler
   server.js               Express sunucusu, giris noktasi
   auth/auth.js             Basit oturum tabanli admin girisi

@@ -1,10 +1,7 @@
-const path = require('path');
 const fs = require('fs');
 const QRCode = require('qrcode');
 const pino = require('pino');
-
-const AUTH_DIR = path.join(__dirname, '..', '..', 'data', 'baileys_auth');
-if (!fs.existsSync(AUTH_DIR)) fs.mkdirSync(AUTH_DIR, { recursive: true });
+const { AUTH_DIR } = require('../paths');
 
 const state = {
   sock: null,

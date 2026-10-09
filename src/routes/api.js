@@ -10,6 +10,7 @@ const photoService = require('../services/photoService');
 const campaignService = require('../services/campaignService');
 const whatsapp = require('../whatsapp/baileysClient');
 const telegram = require('../telegram/telegramClient');
+const { UPLOADS_DIR } = require('../paths');
 
 const router = express.Router();
 
@@ -166,7 +167,7 @@ router.get('/photos/batches/:id/photos', (req, res) => res.json(photoService.lis
 router.get('/photos/file/*', (req, res) => {
   const rel = req.params[0];
   const abs = photoService.absolutePath(rel);
-  if (!abs.startsWith(path.join(__dirname, '..', '..', 'uploads'))) return res.status(400).end();
+  if (!abs.startsWith(UPLOADS_DIR)) return res.status(400).end();
   if (!fs.existsSync(abs)) return res.status(404).end();
   res.sendFile ? res.sendFile(abs) : fs.createReadStream(abs).pipe(res);
 });

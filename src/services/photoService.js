@@ -1,9 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-
-const ACTIVE_DIR = path.join(__dirname, '..', '..', 'uploads', 'active');
-const ARCHIVE_DIR = path.join(__dirname, '..', '..', 'uploads', 'archive');
+const { UPLOADS_DIR, ACTIVE_DIR, ARCHIVE_DIR } = require('../paths');
 
 function getActiveBatch() {
   let batch = db.prepare("SELECT * FROM batches WHERE status = 'active' LIMIT 1").get();
@@ -54,7 +52,7 @@ function pickUnsentPhotosForCustomer(batchId, customerId, count) {
 }
 
 function absolutePath(relativeFilepath) {
-  return path.join(__dirname, '..', '..', 'uploads', relativeFilepath);
+  return path.join(UPLOADS_DIR, relativeFilepath);
 }
 
 function archiveBatch(batchId) {
