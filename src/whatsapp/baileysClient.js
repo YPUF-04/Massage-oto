@@ -76,23 +76,56 @@ function toJid(number) {
   return `${digits}@s.whatsapp.net`;
 }
 
+function withTimeout(promise, ms, timeoutMessage) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(timeoutMessage)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+// Numara WhatsApp'ta kayitli degilse Baileys hemen hata vermez, uzun sure
+// bekleyip zaman asimina ugrar. Once hizli bir kontrol yaparak net hata veririz.
+async function assertNumberOnWhatsApp(number) {
+  const digits = String(number).replace(/[^0-9]/g, '');
+  if (!digits) throw new Error('Gecersiz WhatsApp numarasi (bos)');
+  const results = await withTimeout(
+    state.sock.onWhatsApp(digits),
+    15000,
+    'WhatsApp numara kontrolu zaman asimina ugradi (baglanti veya ag sorunu)'
+  );
+  const found = Array.isArray(results) ? results[0] : null;
+  if (!found || !found.exists) {
+    throw new Error(`${number} numarasi WhatsApp'ta kayitli degil`);
+  }
+  return found.jid;
+}
+
 async function sendImage(number, absoluteFilePath, caption) {
   if (state.status !== 'connected' || !state.sock) {
     throw new Error('WhatsApp baglantisi hazir degil');
   }
-  const jid = toJid(number);
-  await state.sock.sendMessage(jid, {
-    image: fs.readFileSync(absoluteFilePath),
-    caption: caption || undefined
-  });
+  const jid = await assertNumberOnWhatsApp(number);
+  await withTimeout(
+    state.sock.sendMessage(jid, {
+      image: fs.readFileSync(absoluteFilePath),
+      caption: caption || undefined
+    }),
+    30000,
+    'Fotograf gonderimi zaman asimina ugradi (ag sorunu olabilir)'
+  );
 }
 
 async function sendText(number, text) {
   if (state.status !== 'connected' || !state.sock) {
     throw new Error('WhatsApp baglantisi hazir degil');
   }
-  const jid = toJid(number);
-  await state.sock.sendMessage(jid, { text });
+  const jid = await assertNumberOnWhatsApp(number);
+  await withTimeout(
+    state.sock.sendMessage(jid, { text }),
+    30000,
+    'Mesaj gonderimi zaman asimina ugradi (ag sorunu olabilir)'
+  );
 }
 
 async function logout() {
