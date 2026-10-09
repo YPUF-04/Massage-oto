@@ -93,10 +93,10 @@ router.put('/slots/:name', (req, res) => {
   res.json({ ok: true, slots: settingsService.getSlots() });
 });
 
-router.post('/slots/:name/run-now', async (req, res) => {
+router.post('/slots/:name/run-now', (req, res) => {
   try {
-    const result = await campaignService.runSlot(req.params.name, { manual: true });
-    res.json(result);
+    const result = campaignService.runSlot(req.params.name, { manual: true });
+    res.json({ runId: result.runId, started: !!result.started, skipped: !!result.skipped, reason: result.reason });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

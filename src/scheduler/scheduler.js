@@ -24,7 +24,7 @@ function start() {
     for (const slot of slots) {
       try {
         console.log(`[scheduler] ${slot.name} slotu tetiklendi (${nowHHMM})`);
-        await campaignService.runSlot(slot.name);
+        await campaignService.runSlotAndWait(slot.name);
       } catch (e) {
         console.error(`[scheduler] ${slot.name} slotu hata verdi:`, e.message);
       }

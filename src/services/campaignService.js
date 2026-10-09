@@ -136,7 +136,100 @@ function checkAndArchiveIfComplete(batch) {
   return false;
 }
 
-async function runSlot(slotName, { manual = false } = {}) {
+function writeRunProgress(runId, totalSent, errorCount, details, finished) {
+  if (finished) {
+    db.prepare('UPDATE run_log SET finished_at = datetime(\'now\'), sent_count = ?, error_count = ?, details = ? WHERE id = ?')
+      .run(totalSent, errorCount, JSON.stringify(details), runId);
+  } else {
+    db.prepare('UPDATE run_log SET sent_count = ?, error_count = ?, details = ? WHERE id = ?')
+      .run(totalSent, errorCount, JSON.stringify(details), runId);
+  }
+}
+
+async function executeRun(runId, slot) {
+  let totalSent = 0;
+  let errorCount = 0;
+  const details = [];
+  const pushDetail = (line) => {
+    details.push(line);
+    writeRunProgress(runId, totalSent, errorCount, details, false);
+  };
+
+  const batch = photoService.getActiveBatch();
+  const platforms = slot.platforms.split(',').map((p) => p.trim()).filter(Boolean);
+
+  try {
+    for (const platform of platforms) {
+      if (platform === 'telegram') {
+        const tgStatus = telegram.getStatus();
+        if (tgStatus.status !== 'connected') {
+          pushDetail('Telegram bagli degil, atlandi');
+          continue;
+        }
+      }
+      if (platform === 'whatsapp') {
+        const waStatus = whatsapp.getStatus();
+        if (waStatus.status !== 'connected') {
+          pushDetail('WhatsApp bagli degil, atlandi');
+          continue;
+        }
+      }
+
+      const cap = dailyCapFor(platform);
+      let remainingBudget = cap - countSentToday(platform);
+      if (remainingBudget <= 0) {
+        pushDetail(`${platform}: gunluk limit doldu, atlandi`);
+        continue;
+      }
+
+      let eligible = customerService.activeForPlatform(platform)
+        .filter((c) => !isCustomerCompleted(batch.id, c.id));
+      eligible = orderCustomersByLeastRecentlySent(eligible, batch.id);
+      eligible = eligible.slice(0, slot.customer_count);
+
+      if (!eligible.length) {
+        pushDetail(`${platform}: gonderilecek musteri yok`);
+        continue;
+      }
+
+      for (const customer of eligible) {
+        if (remainingBudget <= 0) {
+          pushDetail(`${platform}: gunluk limit doldu, kalan musteriler atlandi`);
+          break;
+        }
+        pushDetail(`${customer.name} (${platform}): gonderiliyor...`);
+        try {
+          const result = await sendToCustomerOnPlatform(customer, platform, batch, slot.photos_per_customer, !!slot.use_caption);
+          totalSent += result.sent;
+          remainingBudget -= result.sent;
+          if (result.sent > 0) {
+            pushDetail(`${customer.name} (${platform}): ${result.sent} foto gonderildi`);
+            await sleep(randomDelayMs());
+          } else if (result.skipped) {
+            pushDetail(`${customer.name} (${platform}): gonderilecek yeni foto yok, atlandi`);
+          }
+        } catch (e) {
+          errorCount++;
+          pushDetail(`${customer.name} (${platform}) hata: ${e.message}`);
+        }
+      }
+    }
+
+    const archived = checkAndArchiveIfComplete(batch);
+    if (archived) pushDetail('Arsiv tamamlandi ve otomatik olarak arsivlendi.');
+  } catch (e) {
+    errorCount++;
+    pushDetail(`Beklenmeyen hata: ${e.message}`);
+  } finally {
+    writeRunProgress(runId, totalSent, errorCount, details, true);
+  }
+
+  return { sent: totalSent, errors: errorCount, details };
+}
+
+// Slotu baslatir. HTTP istegini beklemez: calisma arka planda devam eder,
+// run_log satiri her adimda guncellenir, panel bunu dakikasi dakikasina gosterir.
+function runSlot(slotName, { manual = false } = {}) {
   const slot = db.prepare('SELECT * FROM slots WHERE name = ?').get(slotName);
   if (!slot) throw new Error(`Slot bulunamadi: ${slotName}`);
   if (!slot.enabled && !manual) {
@@ -146,63 +239,18 @@ async function runSlot(slotName, { manual = false } = {}) {
   const runInfo = db.prepare('INSERT INTO run_log (slot_name, started_at) VALUES (?, datetime(\'now\'))').run(slotName);
   const runId = runInfo.lastInsertRowid;
 
-  let totalSent = 0;
-  let errorCount = 0;
-  const details = [];
-  const batch = photoService.getActiveBatch();
-  const platforms = slot.platforms.split(',').map((p) => p.trim()).filter(Boolean);
+  const promise = executeRun(runId, slot).catch((e) => {
+    console.error(`[campaign] ${slotName} calisirken beklenmeyen hata:`, e);
+  });
 
-  try {
-    for (const platform of platforms) {
-      if (platform === 'telegram') {
-        const tgStatus = telegram.getStatus();
-        if (tgStatus.status !== 'connected') {
-          details.push(`Telegram bagli degil, atlandi`);
-          continue;
-        }
-      }
-      if (platform === 'whatsapp') {
-        const waStatus = whatsapp.getStatus();
-        if (waStatus.status !== 'connected') {
-          details.push(`WhatsApp bagli degil, atlandi`);
-          continue;
-        }
-      }
+  return { runId, started: true, promise };
+}
 
-      const cap = dailyCapFor(platform);
-      let remainingBudget = cap - countSentToday(platform);
-      if (remainingBudget <= 0) {
-        details.push(`${platform}: gunluk limit doldu, atlandi`);
-        continue;
-      }
-
-      let eligible = customerService.activeForPlatform(platform)
-        .filter((c) => !isCustomerCompleted(batch.id, c.id));
-      eligible = orderCustomersByLeastRecentlySent(eligible, batch.id);
-      eligible = eligible.slice(0, slot.customer_count);
-
-      for (const customer of eligible) {
-        if (remainingBudget <= 0) break;
-        try {
-          const result = await sendToCustomerOnPlatform(customer, platform, batch, slot.photos_per_customer, !!slot.use_caption);
-          totalSent += result.sent;
-          remainingBudget -= result.sent;
-          if (result.sent > 0) await sleep(randomDelayMs());
-        } catch (e) {
-          errorCount++;
-          details.push(`${customer.name} (${platform}) hata: ${e.message}`);
-        }
-      }
-    }
-
-    const archived = checkAndArchiveIfComplete(batch);
-    if (archived) details.push('Arsiv tamamlandi ve otomatik olarak arsivlendi.');
-  } finally {
-    db.prepare('UPDATE run_log SET finished_at = datetime(\'now\'), sent_count = ?, error_count = ?, details = ? WHERE id = ?')
-      .run(totalSent, errorCount, JSON.stringify(details), runId);
-  }
-
-  return { sent: totalSent, errors: errorCount, details };
+// Zamanlayici (cron) icin: calisma tamamen bitene kadar bekler.
+async function runSlotAndWait(slotName, opts) {
+  const result = runSlot(slotName, opts);
+  if (result.skipped) return result;
+  return result.promise;
 }
 
 function getRecentRuns(limit = 20) {
@@ -221,6 +269,7 @@ function getBatchProgress(batchId) {
 
 module.exports = {
   runSlot,
+  runSlotAndWait,
   getRecentRuns,
   getBatchProgress,
   isWarmupActive,

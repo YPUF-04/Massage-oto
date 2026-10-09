@@ -85,7 +85,7 @@ function initApp() {
   document.getElementById('settings-save-btn').addEventListener('click', saveSettings);
 
   switchTab('dashboard');
-  setInterval(() => { if (currentTab === 'dashboard') loadDashboard(); }, 15000);
+  setInterval(() => { if (currentTab === 'dashboard') loadDashboard(); }, 3000);
 }
 
 let currentTab = 'dashboard';
@@ -144,16 +144,18 @@ async function loadDashboard() {
     runNowRow.innerHTML = slots.map((sl) => `<button data-slot="${sl.name}" class="run-now-btn">${sl.label} simdi calistir</button>`).join('');
     runNowRow.querySelectorAll('.run-now-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
+        const original = btn.textContent;
         btn.disabled = true;
-        btn.textContent = 'Calisiyor...';
         try {
           const r = await api.post(`/api/slots/${btn.dataset.slot}/run-now`);
-          alert(`${r.sent} gonderim yapildi. ${r.errors ? r.errors + ' hata.' : ''}`);
+          if (r.skipped) {
+            alert('Baslamadi: ' + (r.reason || 'bilinmeyen sebep'));
+          }
         } catch (e) {
           alert('Hata: ' + e.message);
         }
         btn.disabled = false;
-        btn.textContent = btn.textContent.replace('Calisiyor...', 'simdi calistir');
+        btn.textContent = original;
         loadDashboard();
       });
     });
@@ -163,9 +165,9 @@ async function loadDashboard() {
   const runs = await api.get('/api/runs');
   document.getElementById('run-log').innerHTML = `
     <table class="table">
-      <thead><tr><th>Slot</th><th>Basladi</th><th>Gonderim</th><th>Hata</th><th>Detay</th></tr></thead>
+      <thead><tr><th>Slot</th><th>Durum</th><th>Basladi</th><th>Gonderim</th><th>Hata</th><th>Detay</th></tr></thead>
       <tbody>
-        ${runs.map((r) => `<tr><td>${r.slot_name}</td><td>${r.started_at}</td><td>${r.sent_count}</td><td>${r.error_count}</td><td class="small">${formatRunDetails(r.details)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Henuz calisma yok</td></tr>'}
+        ${runs.map((r) => `<tr><td>${r.slot_name}</td><td>${r.finished_at ? '<span class="pill ok">bitti</span>' : '<span class="pill warn">devam ediyor</span>'}</td><td>${r.started_at}</td><td>${r.sent_count}</td><td>${r.error_count}</td><td class="small">${formatRunDetails(r.details)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Henuz calisma yok</td></tr>'}
       </tbody>
     </table>
   `;
