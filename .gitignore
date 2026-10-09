@@ -1,0 +1,10 @@
+node_modules/
+data/*.db
+data/*.db-journal
+data/baileys_auth/
+uploads/active/*
+uploads/archive/*
+!uploads/active/.gitkeep
+!uploads/archive/.gitkeep
+.env
+*.log

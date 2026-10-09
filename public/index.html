@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Massage Oto - Yonetim Paneli</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+<div id="login-screen" class="screen">
+  <form id="login-form" class="login-box">
+    <h1>Massage Oto</h1>
+    <p class="muted">Yonetim paneline giris</p>
+    <input id="login-username" type="text" placeholder="Kullanici adi" autocomplete="username" />
+    <input id="login-password" type="password" placeholder="Sifre" autocomplete="current-password" />
+    <button type="submit">Giris yap</button>
+    <div id="login-error" class="error"></div>
+  </form>
+</div>
+
+<div id="app-screen" class="screen" style="display:none;">
+  <header class="topbar">
+    <div class="brand">Massage Oto</div>
+    <nav id="tabs" class="tabs">
+      <button data-tab="dashboard" class="tab-btn active">Panel</button>
+      <button data-tab="photos" class="tab-btn">Fotograflar</button>
+      <button data-tab="customers" class="tab-btn">Musteriler</button>
+      <button data-tab="schedule" class="tab-btn">Zamanlama</button>
+      <button data-tab="captions" class="tab-btn">Mesajlar</button>
+      <button data-tab="settings" class="tab-btn">Ayarlar</button>
+    </nav>
+    <button id="logout-btn" class="ghost">Cikis</button>
+  </header>
+
+  <main id="content">
+
+    <section id="tab-dashboard" class="tab-panel">
+      <div class="grid">
+        <div class="card">
+          <h3>WhatsApp</h3>
+          <div id="wa-status" class="status-line">Yukleniyor...</div>
+          <div id="wa-qr-wrap"></div>
+          <div class="btn-row">
+            <button id="wa-connect-btn">Baglan / QR goster</button>
+            <button id="wa-logout-btn" class="danger">Oturumu kapat</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Telegram</h3>
+          <div id="tg-status" class="status-line">Yukleniyor...</div>
+          <p class="muted small">Bot token .env icinde TELEGRAM_BOT_TOKEN olarak tanimlanmali. Musterilerin botunuza /start yazip baglanmasi gerekir.</p>
+        </div>
+        <div class="card">
+          <h3>Bugunku Gonderim</h3>
+          <div id="today-stats" class="status-line">Yukleniyor...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Aktif Arsiv Ilerlemesi</h3>
+        <div id="batch-progress"></div>
+      </div>
+
+      <div class="card">
+        <h3>Simdi Calistir</h3>
+        <div id="run-now-row" class="btn-row"></div>
+      </div>
+
+      <div class="card">
+        <h3>Son Calismalar</h3>
+        <div id="run-log"></div>
+      </div>
+    </section>
+
+    <section id="tab-photos" class="tab-panel" style="display:none;">
+      <div class="card">
+        <h3>Fotograf Yukle (Aktif Arsive Eklenir)</h3>
+        <input id="photo-input" type="file" multiple accept="image/*" />
+        <button id="photo-upload-btn">Yukle</button>
+        <div id="photo-upload-result" class="muted small"></div>
+      </div>
+      <div class="card">
+        <h3>Arsivler</h3>
+        <table class="table" id="batches-table">
+          <thead><tr><th>ID</th><th>Etiket</th><th>Durum</th><th>Fotograf</th><th>Olusturma</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tab-customers" class="tab-panel" style="display:none;">
+      <div class="card">
+        <h3>Yeni Musteri Ekle</h3>
+        <div class="form-row">
+          <input id="cust-name" placeholder="Isim" />
+          <input id="cust-whatsapp" placeholder="WhatsApp no (905551112233)" />
+          <input id="cust-telegram" placeholder="Telegram chat id (opsiyonel)" />
+          <select id="cust-platform">
+            <option value="whatsapp">WhatsApp</option>
+            <option value="telegram">Telegram</option>
+            <option value="both">Her ikisi</option>
+          </select>
+          <button id="cust-add-btn">Ekle</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Musteri Listesi</h3>
+        <table class="table" id="customers-table">
+          <thead><tr><th>Isim</th><th>WhatsApp</th><th>Telegram</th><th>Platform</th><th>Aktif</th><th>Telegram baglama kodu</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tab-schedule" class="tab-panel" style="display:none;">
+      <div class="card" id="slots-card"></div>
+    </section>
+
+    <section id="tab-captions" class="tab-panel" style="display:none;">
+      <div class="grid">
+        <div class="card">
+          <h3>WhatsApp Mesajlari</h3>
+          <div class="form-row">
+            <input id="cap-wa-text" placeholder="Yeni mesaj metni" />
+            <button id="cap-wa-add">Ekle</button>
+          </div>
+          <ul id="cap-wa-list" class="list"></ul>
+        </div>
+        <div class="card">
+          <h3>Telegram Mesajlari</h3>
+          <div class="form-row">
+            <input id="cap-tg-text" placeholder="Yeni mesaj metni" />
+            <button id="cap-tg-add">Ekle</button>
+          </div>
+          <ul id="cap-tg-list" class="list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-settings" class="tab-panel" style="display:none;">
+      <div class="card">
+        <h3>Gonderim Ayarlari</h3>
+        <div class="form-grid" id="settings-form"></div>
+        <button id="settings-save-btn">Kaydet</button>
+        <div id="settings-save-result" class="muted small"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
