@@ -163,12 +163,23 @@ async function loadDashboard() {
   const runs = await api.get('/api/runs');
   document.getElementById('run-log').innerHTML = `
     <table class="table">
-      <thead><tr><th>Slot</th><th>Basladi</th><th>Gonderim</th><th>Hata</th></tr></thead>
+      <thead><tr><th>Slot</th><th>Basladi</th><th>Gonderim</th><th>Hata</th><th>Detay</th></tr></thead>
       <tbody>
-        ${runs.map((r) => `<tr><td>${r.slot_name}</td><td>${r.started_at}</td><td>${r.sent_count}</td><td>${r.error_count}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Henuz calisma yok</td></tr>'}
+        ${runs.map((r) => `<tr><td>${r.slot_name}</td><td>${r.started_at}</td><td>${r.sent_count}</td><td>${r.error_count}</td><td class="small">${formatRunDetails(r.details)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Henuz calisma yok</td></tr>'}
       </tbody>
     </table>
   `;
+}
+
+function formatRunDetails(details) {
+  if (!details) return '';
+  const list = Array.isArray(details) ? details : [details];
+  if (!list.length) return '';
+  return list.map((line) => escapeHtml(String(line))).join('<br/>');
+}
+
+function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 
 let waPolling = null;
