@@ -103,7 +103,7 @@ Degisiklikler "Kaydet" butonuna basinca etkili olur, sunucuyu yeniden baslatmana
 ## Ayarlar
 
 "Ayarlar" sekmesinde:
-- **Blok ici gecikme**: ayni blok icindeki (orn. 20 fotoluk bir blok) gonderimler arasi kisa bekleme. Hizli gonderim icin kucuk tutulur (varsayilan 1-3 sn).
+- **Blok ici gecikme**: ayni blok icindeki (orn. 20 fotoluk bir blok) gonderimler arasi kisa bekleme. Hizli gonderim icin kucuk tutulur (varsayilan 1-3 sn). Telegram'da fotograflar zaten 10'arli gruplar halinde tek mesaj (albüm) olarak gonderildigi icin bu gecikme sadece grup basina bir kere uygulanir, WhatsApp'ta ise her foto icin ayri ayri uygulanir (WhatsApp'ta albüm gonderimi desteklenmiyor).
 - **Bloklar/musteriler arasi gecikme**: bir blok (foto grubu veya mesaj) bitince, siradaki bloga ya da siradaki musteriye gecmeden once uygulanan buyuk bekleme (varsayilan 20-90 sn). Ban riskini dusuren asil ayar budur, kucuk tutma.
 - WhatsApp / Telegram icin ayri ayri **gunluk farkli musteri limiti** (orn. 30 = o gun en fazla 30 farkli musteriye ulasilir; ayni musteriye birden fazla foto/mesaj gitmesi bu sayiyi arttirmaz). 0 = limitsiz.
 - Isinma modu (yeni baglanan WhatsApp numarasi icin ilk N gun daha dusuk gunluk limit)

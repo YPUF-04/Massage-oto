@@ -32,6 +32,19 @@ async function callApiMultipart(method, fields, fileField, absoluteFilePath) {
   return data.result;
 }
 
+async function callApiMultipartFiles(method, fields, filesByFieldName) {
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.append(k, String(v));
+  for (const [fieldName, absoluteFilePath] of Object.entries(filesByFieldName)) {
+    const buffer = fs.readFileSync(absoluteFilePath);
+    form.append(fieldName, new Blob([buffer]), path.basename(absoluteFilePath));
+  }
+  const res = await fetch(apiUrl(method), { method: 'POST', body: form });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.description || 'Telegram API hatasi');
+  return data.result;
+}
+
 function handleUpdate(update) {
   const msg = update.message;
   if (!msg || !msg.text) return;
@@ -108,9 +121,30 @@ async function sendPhoto(chatId, absoluteFilePath, caption) {
   await callApiMultipart('sendPhoto', { chat_id: chatId, caption: caption || '' }, 'photo', absoluteFilePath);
 }
 
+// Birden fazla fotografi TEK mesaj (albüm) olarak gonderir. Telegram
+// sendMediaGroup en fazla 10 foto kabul eder; daha fazlasi cagiran
+// tarafindan 10'arli gruplara bolunmeli (bkz. chunkArray).
+async function sendPhotoGroup(chatId, absoluteFilePaths, caption) {
+  if (state.status !== 'connected') throw new Error('Telegram bot baslatilmadi');
+  if (!absoluteFilePaths.length) return;
+  if (absoluteFilePaths.length === 1) {
+    await sendPhoto(chatId, absoluteFilePaths[0], caption);
+    return;
+  }
+  const filesByFieldName = {};
+  const media = absoluteFilePaths.map((absPath, i) => {
+    const fieldName = `file${i}`;
+    filesByFieldName[fieldName] = absPath;
+    const item = { type: 'photo', media: `attach://${fieldName}` };
+    if (i === absoluteFilePaths.length - 1 && caption) item.caption = caption;
+    return item;
+  });
+  await callApiMultipartFiles('sendMediaGroup', { chat_id: chatId, media: JSON.stringify(media) }, filesByFieldName);
+}
+
 async function sendText(chatId, text) {
   if (state.status !== 'connected') throw new Error('Telegram bot baslatilmadi');
   await callApi('sendMessage', { chat_id: chatId, text });
 }
 
-module.exports = { start, getStatus, sendPhoto, sendText };
+module.exports = { start, getStatus, sendPhoto, sendPhotoGroup, sendText };

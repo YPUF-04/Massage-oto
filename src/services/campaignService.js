@@ -10,6 +10,12 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function chunkArray(arr, size) {
+  const chunks = [];
+  for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+  return chunks;
+}
+
 // Calisan (devam eden) run'lari ve iptal durumunu bellekte tutar. Sunucu
 // yeniden baslarsa bu bilgi sifirlanir, ama zaten o anda calisan bir islem
 // de kalmaz (process ile birlikte durur).
@@ -177,22 +183,41 @@ async function runStepsForCustomer(customer, platform, batch, steps, runId, push
     if (step.type === 'photos') {
       const photos = photoService.pickUnsentPhotosForCustomer(batch.id, customer.id, step.photo_count, step.category_ids);
       if (!photos.length) continue;
-      for (let i = 0; i < photos.length; i++) {
-        if (isCancelled(runId)) break;
-        const photo = photos[i];
-        const absPath = photoService.absolutePath(photo.filepath);
-        if (platform === 'whatsapp') await whatsapp.sendImage(target, absPath, null);
-        else await telegram.sendPhoto(target, absPath, null);
 
-        db.prepare('INSERT INTO sent_log (customer_id, photo_id, batch_id, platform) VALUES (?, ?, ?, ?)')
-          .run(customer.id, photo.id, batch.id, platform);
-        sentPhotos++;
-        pushItemEvent('🖼️', `${customer.name} (${platform}): foto gonderildi (${i + 1}/${photos.length})`);
-        // Blok icinde hizli gonderim: fotograflar arasinda sadece kisa bir bekleme var.
-        if (i < photos.length - 1) await sleep(randomIntraStepDelayMs());
+      if (platform === 'telegram') {
+        // Telegram'da fotograflari 10'arli gruplar halinde TEK mesaj (albüm)
+        // olarak gonderiyoruz: 20 foto icin 2 API cagrisi, hizli ve dogal.
+        const chunks = chunkArray(photos, 10);
+        for (let c = 0; c < chunks.length; c++) {
+          if (isCancelled(runId)) break;
+          const chunk = chunks[c];
+          const absPaths = chunk.map((p) => photoService.absolutePath(p.filepath));
+          await telegram.sendPhotoGroup(target, absPaths, null);
+          for (const photo of chunk) {
+            db.prepare('INSERT INTO sent_log (customer_id, photo_id, batch_id, platform) VALUES (?, ?, ?, ?)')
+              .run(customer.id, photo.id, batch.id, platform);
+            sentPhotos++;
+          }
+          pushItemEvent('🖼️', `${customer.name} (${platform}): ${chunk.length} foto grup halinde gonderildi (${sentPhotos}/${photos.length})`);
+          if (c < chunks.length - 1) await sleep(randomIntraStepDelayMs());
+        }
+      } else {
+        for (let i = 0; i < photos.length; i++) {
+          if (isCancelled(runId)) break;
+          const photo = photos[i];
+          const absPath = photoService.absolutePath(photo.filepath);
+          await whatsapp.sendImage(target, absPath, null);
+
+          db.prepare('INSERT INTO sent_log (customer_id, photo_id, batch_id, platform) VALUES (?, ?, ?, ?)')
+            .run(customer.id, photo.id, batch.id, platform);
+          sentPhotos++;
+          pushItemEvent('🖼️', `${customer.name} (${platform}): foto gonderildi (${i + 1}/${photos.length})`);
+          // Blok icinde hizli gonderim: fotograflar arasinda sadece kisa bir bekleme var.
+          if (i < photos.length - 1) await sleep(randomIntraStepDelayMs());
+        }
       }
       // Blok bitti: siradaki adima/musteriye gecmeden once buyuk (anti-ban) bekleme.
-      await sleep(randomStepDelayMs());
+      if (!isCancelled(runId)) await sleep(randomStepDelayMs());
     } else if (step.type === 'message') {
       const text = step.message_mode === 'custom'
         ? step.message_text

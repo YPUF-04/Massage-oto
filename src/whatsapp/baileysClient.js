@@ -84,11 +84,24 @@ function withTimeout(promise, ms, timeoutMessage) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+// Numara WhatsApp'ta kayitli mi kontrolunun sonucunu kisa sure onbellekte
+// tutar. Ayni musteriye art arda 20 foto gonderirken her seferinde yeniden
+// sormak (ag gidis-donusu) gereksiz yavaslatiyordu; bir kere dogrulanan
+// numara bu sure icinde tekrar sorgulanmaz.
+const verifiedNumberCache = new Map(); // digits -> { jid, verifiedAt }
+const VERIFY_CACHE_TTL_MS = 10 * 60 * 1000;
+
 // Numara WhatsApp'ta kayitli degilse Baileys hemen hata vermez, uzun sure
 // bekleyip zaman asimina ugrar. Once hizli bir kontrol yaparak net hata veririz.
 async function assertNumberOnWhatsApp(number) {
   const digits = String(number).replace(/[^0-9]/g, '');
   if (!digits) throw new Error('Gecersiz WhatsApp numarasi (bos)');
+
+  const cached = verifiedNumberCache.get(digits);
+  if (cached && Date.now() - cached.verifiedAt < VERIFY_CACHE_TTL_MS) {
+    return cached.jid;
+  }
+
   const results = await withTimeout(
     state.sock.onWhatsApp(digits),
     15000,
@@ -98,6 +111,7 @@ async function assertNumberOnWhatsApp(number) {
   if (!found || !found.exists) {
     throw new Error(`${number} numarasi WhatsApp'ta kayitli degil`);
   }
+  verifiedNumberCache.set(digits, { jid: found.jid, verifiedAt: Date.now() });
   return found.jid;
 }
 
