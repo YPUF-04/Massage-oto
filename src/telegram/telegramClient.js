@@ -55,6 +55,16 @@ function handleUpdate(update) {
 
   if (text === '/myid') {
     callApi('sendMessage', { chat_id: chatId, text: `Sohbet kimligin: ${chatId}` }).catch(() => {});
+    return;
+  }
+
+  if (text === '/info') {
+    const url = process.env.PUBLIC_BASE_URL;
+    const lines = url
+      ? [`Yonetim paneli: ${url}`]
+      : ['Panel adresi henuz tanimli degil.', 'Railway > Variables kismina PUBLIC_BASE_URL ekleyip panelin adresini (orn. https://xxx.up.railway.app) gir.'];
+    lines.push('', 'Diger komutlar:', '/myid - sohbet kimligini gosterir', '/start <kod> - musteri hesabini baglar');
+    callApi('sendMessage', { chat_id: chatId, text: lines.join('\n') }).catch(() => {});
   }
 }
 
