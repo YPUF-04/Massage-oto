@@ -19,18 +19,18 @@
   </form>
 </div>
 
-<div id="app-screen" class="screen" style="display:none;">
-  <header class="topbar">
-    <div class="brand">Massage Oto</div>
+<div id="app-screen" class="screen app-layout" style="display:none;">
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">M</span><span>Massage Oto</span></div>
     <nav id="tabs" class="tabs">
-      <button data-tab="dashboard" class="tab-btn active">Anasayfa</button>
-      <button data-tab="schedule" class="tab-btn">Otomasyon</button>
-      <button data-tab="customers" class="tab-btn">Musteriler</button>
-      <button data-tab="captions" class="tab-btn">Mesajlar</button>
-      <button data-tab="settings" class="tab-btn">Ayarlar</button>
+      <button data-tab="dashboard" class="tab-btn active"><span class="tab-ico">◉</span>Anasayfa</button>
+      <button data-tab="schedule" class="tab-btn"><span class="tab-ico">⚙</span>Otomasyon</button>
+      <button data-tab="customers" class="tab-btn"><span class="tab-ico">☺</span>Musteriler</button>
+      <button data-tab="captions" class="tab-btn"><span class="tab-ico">✉</span>Mesajlar</button>
+      <button data-tab="settings" class="tab-btn"><span class="tab-ico">☰</span>Ayarlar</button>
     </nav>
     <button id="logout-btn" class="ghost">Cikis</button>
-  </header>
+  </aside>
 
   <main id="content">
 
@@ -95,7 +95,7 @@
       <div class="card">
         <h3>Musteri Listesi</h3>
         <div class="table-wrap"><table class="table" id="customers-table">
-          <thead><tr><th>Isim</th><th>WhatsApp</th><th>Telegram</th><th>Platform</th><th>Aktif</th><th>Telegram baglama kodu</th><th></th></tr></thead>
+          <thead><tr><th>Isim</th><th>Gonderilen kategoriler</th><th>WhatsApp</th><th>Telegram</th><th>Platform</th><th>Aktif</th><th>Telegram baglama kodu</th><th></th></tr></thead>
           <tbody></tbody>
         </table></div>
       </div>

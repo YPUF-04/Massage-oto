@@ -335,6 +335,18 @@ async function executeRun(runId, slot) {
 
       let eligible = customerService.activeForPlatform(platform)
         .filter((c) => !isCustomerCompleted(batch.id, c.id));
+      // Foto bloklarinin tamami belirli kategorilerle sinirliysa (orn. sadece
+      // Sweat), o kategorideki tum fotolari zaten almis musterileri atla;
+      // sadece bu kategoriden henuz eksigi olanlara gonder.
+      const stepCategoryIds = slotCategoryFilter(steps);
+      if (stepCategoryIds) {
+        eligible = eligible.filter((c) =>
+          photoService.pickUnsentPhotosForCustomer(batch.id, c.id, 1, stepCategoryIds).length > 0);
+        if (!eligible.length) {
+          pushEvent('⏭️', `${platform}: secilen kategorilerde gonderilmemis fotosu kalan musteri yok`);
+          continue;
+        }
+      }
       eligible = orderCustomersByLeastRecentlySent(eligible, batch.id);
       eligible = eligible.slice(0, slot.customer_count);
 
@@ -534,12 +546,51 @@ function getRecentRuns(limit = 20) {
   return db.prepare('SELECT * FROM run_log ORDER BY id DESC LIMIT ?').all(limit);
 }
 
+// Slottaki foto bloklarinin HEPSI kategori filtreli ise bu kategorilerin
+// birlesimini doner; herhangi bir foto blogu "tum kategoriler" ise null.
+function slotCategoryFilter(steps) {
+  const photoSteps = steps.filter((s) => s.type === 'photos');
+  if (!photoSteps.length) return null;
+  const ids = new Set();
+  for (const s of photoSteps) {
+    if (!s.category_ids || !s.category_ids.length) return null;
+    s.category_ids.forEach((id) => ids.add(id));
+  }
+  return [...ids];
+}
+
+// Musteri basina, aktif arsivde her kategoriden kac foto gonderildi / kac foto var.
+function getCustomerCategoryStats(batchId) {
+  const totals = db.prepare(`
+    SELECT c.id AS category_id, c.name, COUNT(DISTINCT p.id) AS total
+    FROM categories c
+    JOIN photo_categories pc ON pc.category_id = c.id
+    JOIN photos p ON p.id = pc.photo_id AND p.batch_id = ?
+    GROUP BY c.id
+  `).all(batchId);
+  const sentRows = db.prepare(`
+    SELECT sl.customer_id, pc.category_id, COUNT(DISTINCT sl.photo_id) AS sent
+    FROM sent_log sl
+    JOIN photo_categories pc ON pc.photo_id = sl.photo_id
+    WHERE sl.batch_id = ?
+    GROUP BY sl.customer_id, pc.category_id
+  `).all(batchId);
+  const byCustomer = {};
+  for (const r of sentRows) {
+    (byCustomer[r.customer_id] = byCustomer[r.customer_id] || {})[r.category_id] = r.sent;
+  }
+  return { totals, byCustomer };
+}
+
 function getBatchProgress(batchId) {
   const photos = photoService.listPhotosForBatch(batchId);
   const customers = customerService.list().filter((c) => c.active && (c.whatsapp_number || c.telegram_chat_id));
+  const { totals, byCustomer } = getCustomerCategoryStats(batchId);
   const perCustomer = customers.map((c) => {
     const sentCount = db.prepare('SELECT COUNT(DISTINCT photo_id) AS c FROM sent_log WHERE batch_id = ? AND customer_id = ?').get(batchId, c.id).c;
-    return { customer: c, sent: sentCount, total: photos.length, completed: isCustomerCompleted(batchId, c.id) };
+    const sentByCat = byCustomer[c.id] || {};
+    const categories = totals.map((t) => ({ name: t.name, sent: sentByCat[t.category_id] || 0, total: t.total }));
+    return { customer: c, sent: sentCount, total: photos.length, completed: isCustomerCompleted(batchId, c.id), categories };
   });
   return { totalPhotos: photos.length, customers: perCustomer };
 }

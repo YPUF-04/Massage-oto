@@ -122,20 +122,28 @@ async function loadDashboard() {
   tgBox.innerHTML = `<span class="pill ${tgPill}">${s.telegram.status}</span> ${s.telegram.lastError ? '<span class="muted small">' + s.telegram.lastError + '</span>' : ''}`;
 
   const todayBox = document.getElementById('today-stats');
+  const capText = (v) => (v === null ? '∞' : v);
   todayBox.innerHTML = `
-    WhatsApp: <b>${s.sentToday.whatsapp}</b> / ${s.dailyCap.whatsapp === null ? '∞' : s.dailyCap.whatsapp}
-    ${s.warmupActive ? '<span class="pill warn">Isinma modu aktif</span>' : ''}<br/>
-    Telegram: <b>${s.sentToday.telegram}</b> / ${s.dailyCap.telegram === null ? '∞' : s.dailyCap.telegram}
+    <div class="stat-row">
+      <div class="stat"><div class="stat-value">${s.sentToday.whatsapp}<span class="stat-of">/${capText(s.dailyCap.whatsapp)}</span></div><div class="stat-label">WhatsApp</div></div>
+      <div class="stat"><div class="stat-value">${s.sentToday.telegram}<span class="stat-of">/${capText(s.dailyCap.telegram)}</span></div><div class="stat-label">Telegram</div></div>
+    </div>
+    ${s.warmupActive ? '<span class="pill warn">Isinma modu aktif</span>' : ''}
   `;
 
   const progressBox = document.getElementById('batch-progress');
   const bp = s.batchProgress;
   progressBox.innerHTML = `
-    <p class="muted small">Arsiv: ${s.activeBatch.label} - toplam ${bp.totalPhotos} fotograf</p>
+    <p class="muted small">Arsiv: ${escapeHtml(s.activeBatch.label)} · toplam ${bp.totalPhotos} fotograf</p>
     <div class="table-wrap"><table class="table">
-      <thead><tr><th>Musteri</th><th>Gonderildi</th><th>Tamamlandi</th></tr></thead>
+      <thead><tr><th>Musteri</th><th>Ilerleme</th><th>Kategoriler</th><th>Durum</th></tr></thead>
       <tbody>
-        ${bp.customers.map((c) => `<tr><td>${c.customer.name}</td><td>${c.sent}/${c.total}</td><td>${c.completed ? 'Evet' : 'Hayir'}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Musteri yok</td></tr>'}
+        ${bp.customers.map((c) => `<tr>
+          <td>${escapeHtml(c.customer.name)}</td>
+          <td>${renderMiniBar(c.sent, c.total)}</td>
+          <td class="wrap">${renderCategoryChips(c.categories)}</td>
+          <td>${c.completed ? '<span class="pill ok">tamamlandi</span>' : '<span class="pill">devam</span>'}</td>
+        </tr>`).join('') || '<tr><td colspan="4" class="muted">Musteri yok</td></tr>'}
       </tbody>
     </table></div>
   `;
@@ -217,6 +225,21 @@ async function cancelRun(runId) {
   loadDashboard();
 }
 
+function renderMiniBar(sent, total) {
+  const pct = total > 0 ? Math.round((sent / total) * 100) : 0;
+  return `<div class="mini-bar"><div style="width:${pct}%"></div></div><span class="muted small">${sent}/${total}</span>`;
+}
+
+// Musteriye her kategoriden kac foto gittigini cip olarak gosterir.
+// Hic gitmemis kategori soluk, tamami gitmis kategori yesil gorunur.
+function renderCategoryChips(categories) {
+  if (!categories || !categories.length) return '<span class="muted small">kategori yok</span>';
+  return categories.map((cat) => {
+    const state = cat.sent === 0 ? 'none' : cat.sent >= cat.total ? 'done' : 'part';
+    return `<span class="chip chip-${state}" title="${escapeHtml(cat.name)}: ${cat.sent}/${cat.total}">${escapeHtml(cat.name)} ${cat.sent}/${cat.total}</span>`;
+  }).join('');
+}
+
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
@@ -286,10 +309,13 @@ async function uploadPhotos() {
 
 // ---------- Customers ----------
 async function loadCustomers() {
-  const customers = await api.get('/api/customers');
+  const [customers, status] = await Promise.all([api.get('/api/customers'), api.get('/api/status')]);
+  const catsByCustomer = {};
+  for (const row of status.batchProgress.customers) catsByCustomer[row.customer.id] = row.categories;
   document.querySelector('#customers-table tbody').innerHTML = customers.map((c) => `
     <tr>
-      <td><input value="${c.name}" data-field="name" data-id="${c.id}" class="cust-edit" /></td>
+      <td><input value="${escapeHtml(c.name)}" data-field="name" data-id="${c.id}" class="cust-edit" /></td>
+      <td class="wrap">${renderCategoryChips(catsByCustomer[c.id])}</td>
       <td><input value="${c.whatsapp_number || ''}" data-field="whatsapp_number" data-id="${c.id}" class="cust-edit" /></td>
       <td><input value="${c.telegram_chat_id || ''}" data-field="telegram_chat_id" data-id="${c.id}" class="cust-edit" /></td>
       <td>
@@ -303,7 +329,7 @@ async function loadCustomers() {
       <td class="muted small">/start ${c.telegram_link_code}</td>
       <td><button data-del="${c.id}" class="danger">Sil</button></td>
     </tr>
-  `).join('') || '<tr><td colspan="7" class="muted">Musteri yok</td></tr>';
+  `).join('') || '<tr><td colspan="8" class="muted">Musteri yok</td></tr>';
 
   document.querySelectorAll('.cust-edit').forEach((el) => {
     el.addEventListener('change', async () => {
