@@ -110,6 +110,69 @@ main { padding: 16px; max-width: 1100px; margin: 0 auto; }
 
 #wa-qr-wrap img { max-width: 220px; display: block; margin-top: 8px; border-radius: 8px; }
 
+/* Adim sirasi (step) editoru */
+.step-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  background: #0c1019;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+.step-row .step-num {
+  min-width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.step-row > .step-fields { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; align-items: center; }
+.step-row textarea { width: 100%; margin-top: 6px; }
+.step-arrow { color: var(--muted); font-size: 12px; margin: -4px 0 8px 32px; }
+
+/* Canli calisma gorunumu */
+.run-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+.run-card .run-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.progress-bar { height: 8px; border-radius: 999px; background: #0c1019; overflow: hidden; margin: 6px 0; }
+.progress-bar > div { height: 100%; background: var(--accent); transition: width 0.3s ease; }
+.run-events { max-height: 220px; overflow-y: auto; font-size: 13px; display: flex; flex-direction: column; gap: 3px; }
+.run-events .ev { display: flex; gap: 6px; }
+.run-events .ev .ev-time { color: var(--muted); flex-shrink: 0; }
+
+/* WhatsApp / Telegram onizleme baloncugu */
+.phone-preview {
+  border-radius: 12px;
+  padding: 14px;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.phone-preview.wa { background: #0b141a; }
+.phone-preview.tg { background: #17212b; }
+.phone-preview .bubble {
+  max-width: 85%;
+  border-radius: 10px;
+  padding: 8px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #fff;
+}
+.phone-preview.wa .bubble { background: #005c4b; align-self: flex-start; border-top-left-radius: 2px; }
+.phone-preview.tg .bubble { background: #2b5278; align-self: flex-start; border-top-left-radius: 2px; }
+.phone-preview .bubble img { width: 100%; border-radius: 6px; display: block; margin-bottom: 4px; }
+.phone-preview .bubble .cap-text { white-space: pre-wrap; }
+.phone-preview .empty { color: var(--muted); font-size: 13px; }
+
 @media (max-width: 600px) {
   .topbar { flex-direction: column; align-items: flex-start; }
   main { padding: 10px; }

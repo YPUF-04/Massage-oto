@@ -78,13 +78,48 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE TABLE IF NOT EXISTS run_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   slot_name TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'slot', -- slot | broadcast
   started_at TEXT NOT NULL DEFAULT (datetime('now')),
   finished_at TEXT,
   sent_count INTEGER NOT NULL DEFAULT 0,
   error_count INTEGER NOT NULL DEFAULT 0,
+  total_targets INTEGER NOT NULL DEFAULT 0,
+  processed_targets INTEGER NOT NULL DEFAULT 0,
   details TEXT
 );
+
+CREATE TABLE IF NOT EXISTS message_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  customer_id INTEGER NOT NULL REFERENCES customers(id),
+  platform TEXT NOT NULL,
+  text TEXT NOT NULL,
+  run_id INTEGER,
+  sent_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS slot_steps (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  slot_id INTEGER NOT NULL REFERENCES slots(id),
+  position INTEGER NOT NULL,
+  type TEXT NOT NULL, -- photos | message
+  photo_count INTEGER NOT NULL DEFAULT 1,
+  message_mode TEXT NOT NULL DEFAULT 'random_caption', -- random_caption | custom
+  message_text TEXT
+);
 `);
+
+// Daha once deploy edilmis veritabanlarinda eksik olabilecek kolonlari ekler.
+// SQLite "ADD COLUMN IF NOT EXISTS" desteklemedigi icin hata yoksayilarak denenir.
+function addColumnIfMissing(table, columnDef) {
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${columnDef}`);
+  } catch (e) {
+    // kolon zaten varsa buraya duser, yoksayilir
+  }
+}
+addColumnIfMissing('run_log', "kind TEXT NOT NULL DEFAULT 'slot'");
+addColumnIfMissing('run_log', 'total_targets INTEGER NOT NULL DEFAULT 0');
+addColumnIfMissing('run_log', 'processed_targets INTEGER NOT NULL DEFAULT 0');
 
 function seedDefaults() {
   const slotCount = db.prepare('SELECT COUNT(*) AS c FROM slots').get().c;
@@ -106,6 +141,7 @@ function seedDefaults() {
     warmup_max_per_day: '10',
     whatsapp_connected_since: '',
     admin_telegram_chat_id: '',
+    admin_notify_enabled: 'true',
     daily_send_cap_whatsapp: '60',
     daily_send_cap_telegram: '0'
   };
@@ -125,6 +161,23 @@ function seedDefaults() {
   const activeBatch = db.prepare("SELECT id FROM batches WHERE status = 'active' LIMIT 1").get();
   if (!activeBatch) {
     db.prepare("INSERT INTO batches (label, status) VALUES (?, 'active')").run('Ilk Arsiv');
+  }
+
+  // Her slotun en az bir adim sirasi (step) olmasini sagla. Eski kayitlarda
+  // (photos_per_customer + use_caption) varsa bunu 2 adimlik bir sıraya tasir.
+  const allSlots = db.prepare('SELECT * FROM slots').all();
+  const insertStep = db.prepare(`
+    INSERT INTO slot_steps (slot_id, position, type, photo_count, message_mode, message_text)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  for (const slot of allSlots) {
+    const stepCount = db.prepare('SELECT COUNT(*) AS c FROM slot_steps WHERE slot_id = ?').get(slot.id).c;
+    if (stepCount > 0) continue;
+    let pos = 0;
+    insertStep.run(slot.id, pos++, 'photos', slot.photos_per_customer || 1, 'random_caption', null);
+    if (slot.use_caption) {
+      insertStep.run(slot.id, pos++, 'message', 1, 'random_caption', null);
+    }
   }
 }
 

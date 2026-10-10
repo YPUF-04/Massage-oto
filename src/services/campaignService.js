@@ -4,6 +4,7 @@ const customerService = require('./customerService');
 const photoService = require('./photoService');
 const whatsapp = require('../whatsapp/baileysClient');
 const telegram = require('../telegram/telegramClient');
+const adminNotify = require('./adminNotify');
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -26,8 +27,9 @@ function todayRange() {
 
 function countSentToday(platform) {
   const since = todayRange();
-  const row = db.prepare('SELECT COUNT(*) AS c FROM sent_log WHERE platform = ? AND sent_at >= ?').get(platform, since);
-  return row.c;
+  const photoRow = db.prepare('SELECT COUNT(*) AS c FROM sent_log WHERE platform = ? AND sent_at >= ?').get(platform, since);
+  const msgRow = db.prepare('SELECT COUNT(*) AS c FROM message_log WHERE platform = ? AND sent_at >= ?').get(platform, since);
+  return photoRow.c + msgRow.c;
 }
 
 function isWarmupActive() {
@@ -83,40 +85,58 @@ function orderCustomersByLeastRecentlySent(customers, batchId) {
   return withStats.map((w) => w.customer);
 }
 
-async function sendToCustomerOnPlatform(customer, platform, batch, photosPerCustomer, useCaption) {
-  if (isCustomerCompleted(batch.id, customer.id)) return { sent: 0, skipped: true };
-
-  const photos = photoService.pickUnsentPhotosForCustomer(batch.id, customer.id, photosPerCustomer);
-  if (!photos.length) {
-    markCompletedIfExhausted(batch.id, customer.id);
-    return { sent: 0, skipped: true };
+// Bir musteri icin tanimli adim sirasini (foto blogu -> mesaj -> foto blogu -> ...)
+// sirayla isler. Her tekil gonderimden sonra pushItemEvent ile panelde goruluyor
+// ve anti-ban gecikmesi uygulaniyor (cagiran taraf yapar).
+async function runStepsForCustomer(customer, platform, batch, steps, runId, pushItemEvent) {
+  if (isCustomerCompleted(batch.id, customer.id)) {
+    return { sentPhotos: 0, sentMessages: 0, skipped: true };
   }
 
-  const caption = useCaption ? settingsService.randomActiveCaption(platform) : null;
-  let sentCount = 0;
+  const target = platform === 'whatsapp' ? customer.whatsapp_number : customer.telegram_chat_id;
+  if (!target) {
+    return { sentPhotos: 0, sentMessages: 0, skipped: true, noTarget: true };
+  }
 
-  for (let i = 0; i < photos.length; i++) {
-    const photo = photos[i];
-    const absPath = photoService.absolutePath(photo.filepath);
-    const captionText = i === photos.length - 1 ? (caption ? caption.text : null) : null;
+  let sentPhotos = 0;
+  let sentMessages = 0;
 
-    if (platform === 'whatsapp') {
-      if (!customer.whatsapp_number) break;
-      await whatsapp.sendImage(customer.whatsapp_number, absPath, captionText);
-    } else if (platform === 'telegram') {
-      if (!customer.telegram_chat_id) break;
-      await telegram.sendPhoto(customer.telegram_chat_id, absPath, captionText);
+  for (const step of steps) {
+    if (step.type === 'photos') {
+      const photos = photoService.pickUnsentPhotosForCustomer(batch.id, customer.id, step.photo_count);
+      if (!photos.length) continue;
+      for (const photo of photos) {
+        const absPath = photoService.absolutePath(photo.filepath);
+        if (platform === 'whatsapp') await whatsapp.sendImage(target, absPath, null);
+        else await telegram.sendPhoto(target, absPath, null);
+
+        db.prepare('INSERT INTO sent_log (customer_id, photo_id, batch_id, platform) VALUES (?, ?, ?, ?)')
+          .run(customer.id, photo.id, batch.id, platform);
+        sentPhotos++;
+        pushItemEvent('🖼️', `${customer.name} (${platform}): foto gonderildi`);
+        await sleep(randomDelayMs());
+      }
+    } else if (step.type === 'message') {
+      const text = step.message_mode === 'custom'
+        ? step.message_text
+        : (settingsService.randomActiveCaption(platform) || {}).text;
+      if (!text) {
+        pushItemEvent('⏭️', `${customer.name} (${platform}): mesaj adimi atlandi (metin yok)`);
+        continue;
+      }
+      if (platform === 'whatsapp') await whatsapp.sendText(target, text);
+      else await telegram.sendText(target, text);
+
+      db.prepare('INSERT INTO message_log (customer_id, platform, text, run_id) VALUES (?, ?, ?, ?)')
+        .run(customer.id, platform, text, runId);
+      sentMessages++;
+      pushItemEvent('💬', `${customer.name} (${platform}): mesaj gonderildi - "${text.slice(0, 40)}${text.length > 40 ? '...' : ''}"`);
+      await sleep(randomDelayMs());
     }
-
-    db.prepare('INSERT INTO sent_log (customer_id, photo_id, batch_id, platform) VALUES (?, ?, ?, ?)')
-      .run(customer.id, photo.id, batch.id, platform);
-    sentCount++;
-
-    if (i < photos.length - 1) await sleep(randomDelayMs());
   }
 
   markCompletedIfExhausted(batch.id, customer.id);
-  return { sent: sentCount, skipped: false };
+  return { sentPhotos, sentMessages, skipped: false };
 }
 
 function checkAndArchiveIfComplete(batch) {
@@ -136,41 +156,62 @@ function checkAndArchiveIfComplete(batch) {
   return false;
 }
 
-function writeRunProgress(runId, totalSent, errorCount, details, finished) {
-  if (finished) {
-    db.prepare('UPDATE run_log SET finished_at = datetime(\'now\'), sent_count = ?, error_count = ?, details = ? WHERE id = ?')
-      .run(totalSent, errorCount, JSON.stringify(details), runId);
-  } else {
-    db.prepare('UPDATE run_log SET sent_count = ?, error_count = ?, details = ? WHERE id = ?')
-      .run(totalSent, errorCount, JSON.stringify(details), runId);
-  }
+function nowClock() {
+  return new Date().toTimeString().slice(0, 8);
+}
+
+function writeRunProgress(runId, state, finished) {
+  const { totalSent, errorCount, events, totalTargets, processedTargets } = state;
+  const sql = finished
+    ? "UPDATE run_log SET finished_at = datetime('now'), sent_count = ?, error_count = ?, total_targets = ?, processed_targets = ?, details = ? WHERE id = ?"
+    : 'UPDATE run_log SET sent_count = ?, error_count = ?, total_targets = ?, processed_targets = ?, details = ? WHERE id = ?';
+  db.prepare(sql).run(totalSent, errorCount, totalTargets, processedTargets, JSON.stringify(events), runId);
+}
+
+function makeRunState() {
+  return { totalSent: 0, errorCount: 0, events: [], totalTargets: 0, processedTargets: 0 };
+}
+
+function makePusher(runId, state) {
+  return (icon, text) => {
+    state.events.push({ t: nowClock(), icon, text });
+    writeRunProgress(runId, state, false);
+    if (icon === '❌') {
+      adminNotify.notifyFirstError(runId, text).catch(() => {});
+    }
+  };
 }
 
 async function executeRun(runId, slot) {
-  let totalSent = 0;
-  let errorCount = 0;
-  const details = [];
-  const pushDetail = (line) => {
-    details.push(line);
-    writeRunProgress(runId, totalSent, errorCount, details, false);
+  const state = makeRunState();
+  const pushEvent = makePusher(runId, state);
+  const pushItemEvent = (icon, text) => {
+    state.events.push({ t: nowClock(), icon, text });
+    writeRunProgress(runId, state, false);
   };
 
   const batch = photoService.getActiveBatch();
   const platforms = slot.platforms.split(',').map((p) => p.trim()).filter(Boolean);
+  const steps = settingsService.getSlotSteps(slot.name);
+  if (!steps.length) {
+    pushEvent('❌', 'Bu slot icin adim sirasi tanimli degil, "Zamanlama" ayarindan en az bir adim ekle.');
+    writeRunProgress(runId, state, true);
+    return { sent: 0, errors: 1, details: state.events };
+  }
 
   try {
     for (const platform of platforms) {
       if (platform === 'telegram') {
         const tgStatus = telegram.getStatus();
         if (tgStatus.status !== 'connected') {
-          pushDetail('Telegram bagli degil, atlandi');
+          pushEvent('⏭️', 'Telegram bagli degil, atlandi');
           continue;
         }
       }
       if (platform === 'whatsapp') {
         const waStatus = whatsapp.getStatus();
         if (waStatus.status !== 'connected') {
-          pushDetail('WhatsApp bagli degil, atlandi');
+          pushEvent('⏭️', 'WhatsApp bagli degil, atlandi');
           continue;
         }
       }
@@ -178,7 +219,7 @@ async function executeRun(runId, slot) {
       const cap = dailyCapFor(platform);
       let remainingBudget = cap - countSentToday(platform);
       if (remainingBudget <= 0) {
-        pushDetail(`${platform}: gunluk limit doldu, atlandi`);
+        pushEvent('⏭️', `${platform}: gunluk limit doldu, atlandi`);
         continue;
       }
 
@@ -188,43 +229,54 @@ async function executeRun(runId, slot) {
       eligible = eligible.slice(0, slot.customer_count);
 
       if (!eligible.length) {
-        pushDetail(`${platform}: gonderilecek musteri yok`);
+        pushEvent('⏭️', `${platform}: gonderilecek musteri yok`);
         continue;
       }
 
+      state.totalTargets += eligible.length;
+      pushEvent('📋', `${platform}: ${eligible.length} musteriye gonderim baslatiliyor`);
+
       for (const customer of eligible) {
         if (remainingBudget <= 0) {
-          pushDetail(`${platform}: gunluk limit doldu, kalan musteriler atlandi`);
+          pushEvent('⏭️', `${platform}: gunluk limit doldu, kalan musteriler atlandi`);
           break;
         }
-        pushDetail(`${customer.name} (${platform}): gonderiliyor...`);
+        pushEvent('▶️', `${customer.name} (${platform}): adim sirasi basladi (${steps.length} adim)`);
         try {
-          const result = await sendToCustomerOnPlatform(customer, platform, batch, slot.photos_per_customer, !!slot.use_caption);
-          totalSent += result.sent;
-          remainingBudget -= result.sent;
-          if (result.sent > 0) {
-            pushDetail(`${customer.name} (${platform}): ${result.sent} foto gonderildi`);
-            await sleep(randomDelayMs());
+          const result = await runStepsForCustomer(customer, platform, batch, steps, runId, pushItemEvent);
+          const totalForCustomer = result.sentPhotos + result.sentMessages;
+          state.totalSent += totalForCustomer;
+          remainingBudget -= totalForCustomer;
+          if (result.noTarget) {
+            pushEvent('⏭️', `${customer.name} (${platform}): ${platform === 'whatsapp' ? 'WhatsApp numarasi' : 'Telegram baglantisi'} yok, atlandi`);
+          } else if (totalForCustomer > 0) {
+            pushEvent('✅', `${customer.name} (${platform}): ${result.sentPhotos} foto, ${result.sentMessages} mesaj gonderildi`);
           } else if (result.skipped) {
-            pushDetail(`${customer.name} (${platform}): gonderilecek yeni foto yok, atlandi`);
+            pushEvent('⏭️', `${customer.name} (${platform}): gonderilecek yeni foto yok, atlandi`);
           }
         } catch (e) {
-          errorCount++;
-          pushDetail(`${customer.name} (${platform}) hata: ${e.message}`);
+          state.errorCount++;
+          pushEvent('❌', `${customer.name} (${platform}) hata: ${e.message}`);
         }
+        state.processedTargets++;
+        writeRunProgress(runId, state, false);
       }
     }
 
     const archived = checkAndArchiveIfComplete(batch);
-    if (archived) pushDetail('Arsiv tamamlandi ve otomatik olarak arsivlendi.');
+    if (archived) pushEvent('📦', 'Arsiv tamamlandi ve otomatik olarak arsivlendi.');
   } catch (e) {
-    errorCount++;
-    pushDetail(`Beklenmeyen hata: ${e.message}`);
+    state.errorCount++;
+    pushEvent('❌', `Beklenmeyen hata: ${e.message}`);
   } finally {
-    writeRunProgress(runId, totalSent, errorCount, details, true);
+    writeRunProgress(runId, state, true);
   }
 
-  return { sent: totalSent, errors: errorCount, details };
+  const run = db.prepare('SELECT * FROM run_log WHERE id = ?').get(runId);
+  adminNotify.notifyRunReport({ ...run, details: state.events }).catch(() => {});
+  adminNotify.clearRun(runId);
+
+  return { sent: state.totalSent, errors: state.errorCount, details: state.events };
 }
 
 // Slotu baslatir. HTTP istegini beklemez: calisma arka planda devam eder,
@@ -236,7 +288,7 @@ function runSlot(slotName, { manual = false } = {}) {
     return { skipped: true, reason: 'slot devre disi' };
   }
 
-  const runInfo = db.prepare('INSERT INTO run_log (slot_name, started_at) VALUES (?, datetime(\'now\'))').run(slotName);
+  const runInfo = db.prepare("INSERT INTO run_log (slot_name, kind, started_at) VALUES (?, 'slot', datetime('now'))").run(slotName);
   const runId = runInfo.lastInsertRowid;
 
   const promise = executeRun(runId, slot).catch((e) => {
@@ -251,6 +303,102 @@ async function runSlotAndWait(slotName, opts) {
   const result = runSlot(slotName, opts);
   if (result.skipped) return result;
   return result.promise;
+}
+
+// --- Toplu Mesaj (fotografsiz, sadece metin) ---
+
+async function executeBroadcast(runId, { platform, text, customerIds }) {
+  const state = makeRunState();
+  const pushEvent = makePusher(runId, state);
+
+  const platforms = platform === 'both' ? ['whatsapp', 'telegram'] : [platform];
+
+  try {
+    for (const p of platforms) {
+      if (p === 'telegram' && telegram.getStatus().status !== 'connected') {
+        pushEvent('⏭️', 'Telegram bagli degil, atlandi');
+        continue;
+      }
+      if (p === 'whatsapp' && whatsapp.getStatus().status !== 'connected') {
+        pushEvent('⏭️', 'WhatsApp bagli degil, atlandi');
+        continue;
+      }
+
+      const cap = dailyCapFor(p);
+      let remainingBudget = cap - countSentToday(p);
+      if (remainingBudget <= 0) {
+        pushEvent('⏭️', `${p}: gunluk limit doldu, atlandi`);
+        continue;
+      }
+
+      let targets = customerService.activeForPlatform(p);
+      if (customerIds && customerIds.length) {
+        const idSet = new Set(customerIds.map(Number));
+        targets = targets.filter((c) => idSet.has(c.id));
+      }
+
+      if (!targets.length) {
+        pushEvent('⏭️', `${p}: gonderilecek musteri yok`);
+        continue;
+      }
+
+      state.totalTargets += targets.length;
+      pushEvent('📋', `${p}: ${targets.length} musteriye mesaj gonderimi baslatiliyor`);
+
+      for (const customer of targets) {
+        if (remainingBudget <= 0) {
+          pushEvent('⏭️', `${p}: gunluk limit doldu, kalan musteriler atlandi`);
+          break;
+        }
+        pushEvent('📤', `${customer.name} (${p}): mesaj gonderiliyor...`);
+        try {
+          const target = p === 'whatsapp' ? customer.whatsapp_number : customer.telegram_chat_id;
+          if (!target) {
+            pushEvent('⏭️', `${customer.name} (${p}): ${p === 'whatsapp' ? 'WhatsApp numarasi' : 'Telegram baglantisi'} yok, atlandi`);
+          } else {
+            if (p === 'whatsapp') await whatsapp.sendText(target, text);
+            else await telegram.sendText(target, text);
+            db.prepare('INSERT INTO message_log (customer_id, platform, text, run_id) VALUES (?, ?, ?, ?)')
+              .run(customer.id, p, text, runId);
+            state.totalSent++;
+            remainingBudget--;
+            pushEvent('✅', `${customer.name} (${p}): mesaj gonderildi`);
+          }
+        } catch (e) {
+          state.errorCount++;
+          pushEvent('❌', `${customer.name} (${p}) hata: ${e.message}`);
+        }
+        state.processedTargets++;
+        writeRunProgress(runId, state, false);
+        await sleep(randomDelayMs());
+      }
+    }
+  } catch (e) {
+    state.errorCount++;
+    pushEvent('❌', `Beklenmeyen hata: ${e.message}`);
+  } finally {
+    writeRunProgress(runId, state, true);
+  }
+
+  const run = db.prepare('SELECT * FROM run_log WHERE id = ?').get(runId);
+  adminNotify.notifyRunReport({ ...run, details: state.events }).catch(() => {});
+  adminNotify.clearRun(runId);
+
+  return { sent: state.totalSent, errors: state.errorCount, details: state.events };
+}
+
+function runMessageBroadcast({ platform, text, customerIds }) {
+  if (!text || !text.trim()) throw new Error('Mesaj metni bos olamaz');
+  if (!['whatsapp', 'telegram', 'both'].includes(platform)) throw new Error('Gecersiz platform');
+
+  const runInfo = db.prepare("INSERT INTO run_log (slot_name, kind, started_at) VALUES (?, 'broadcast', datetime('now'))").run('broadcast');
+  const runId = runInfo.lastInsertRowid;
+
+  const promise = executeBroadcast(runId, { platform, text: text.trim(), customerIds }).catch((e) => {
+    console.error('[campaign] toplu mesaj calisirken beklenmeyen hata:', e);
+  });
+
+  return { runId, started: true, promise };
 }
 
 function getRecentRuns(limit = 20) {
@@ -270,6 +418,7 @@ function getBatchProgress(batchId) {
 module.exports = {
   runSlot,
   runSlotAndWait,
+  runMessageBroadcast,
   getRecentRuns,
   getBatchProgress,
   isWarmupActive,

@@ -102,6 +102,31 @@ router.post('/slots/:name/run-now', (req, res) => {
   }
 });
 
+// --- Adim sirasi (foto blogu / mesaj blogu, sirali) ---
+router.get('/slots/:name/steps', (req, res) => {
+  res.json(settingsService.getSlotSteps(req.params.name));
+});
+
+router.put('/slots/:name/steps', (req, res) => {
+  try {
+    const steps = settingsService.replaceSlotSteps(req.params.name, req.body.steps || []);
+    res.json({ ok: true, steps });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// --- Toplu Mesaj (fotografsiz, sadece metin) ---
+router.post('/broadcast', (req, res) => {
+  try {
+    const { platform, text, customerIds } = req.body || {};
+    const result = campaignService.runMessageBroadcast({ platform, text, customerIds });
+    res.json({ runId: result.runId, started: !!result.started });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
 // --- Captions ---
 router.get('/captions/:platform', (req, res) => {
   res.json(settingsService.getCaptions(req.params.platform));

@@ -49,6 +49,43 @@ function updateSlot(name, fields) {
   db.prepare(`UPDATE slots SET ${sets.join(', ')} WHERE name = ?`).run(...params);
 }
 
+function getSlotByName(name) {
+  return db.prepare('SELECT * FROM slots WHERE name = ?').get(name);
+}
+
+function getSlotSteps(slotName) {
+  const slot = getSlotByName(slotName);
+  if (!slot) return [];
+  return db.prepare('SELECT * FROM slot_steps WHERE slot_id = ? ORDER BY position ASC').all(slot.id);
+}
+
+// steps: [{ type: 'photos'|'message', photo_count, message_mode: 'random_caption'|'custom', message_text }]
+function replaceSlotSteps(slotName, steps) {
+  const slot = getSlotByName(slotName);
+  if (!slot) throw new Error(`Slot bulunamadi: ${slotName}`);
+  if (!Array.isArray(steps) || !steps.length) throw new Error('En az bir adim gerekli');
+
+  const tx = db.transaction(() => {
+    db.prepare('DELETE FROM slot_steps WHERE slot_id = ?').run(slot.id);
+    const insert = db.prepare(`
+      INSERT INTO slot_steps (slot_id, position, type, photo_count, message_mode, message_text)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    steps.forEach((step, idx) => {
+      const type = step.type === 'message' ? 'message' : 'photos';
+      const photoCount = Math.max(1, parseInt(step.photo_count, 10) || 1);
+      const messageMode = step.message_mode === 'custom' ? 'custom' : 'random_caption';
+      const messageText = messageMode === 'custom' ? String(step.message_text || '').trim() : null;
+      if (type === 'message' && messageMode === 'custom' && !messageText) {
+        throw new Error(`${idx + 1}. adim: ozel mesaj metni bos olamaz`);
+      }
+      insert.run(slot.id, idx, type, photoCount, messageMode, messageText);
+    });
+  });
+  tx();
+  return getSlotSteps(slotName);
+}
+
 function getCaptions(platform) {
   return db.prepare('SELECT * FROM caption_templates WHERE platform = ? ORDER BY id DESC').all(platform);
 }
@@ -74,5 +111,6 @@ function randomActiveCaption(platform) {
 module.exports = {
   getAll, get, set, setMany,
   getSlots, updateSlot,
+  getSlotSteps, replaceSlotSteps,
   getCaptions, addCaption, setCaptionActive, deleteCaption, randomActiveCaption
 };

@@ -82,6 +82,8 @@ function initApp() {
   document.getElementById('cap-wa-add').addEventListener('click', () => addCaption('whatsapp'));
   document.getElementById('cap-tg-add').addEventListener('click', () => addCaption('telegram'));
 
+  document.getElementById('bc-send-btn').addEventListener('click', sendBroadcast);
+
   document.getElementById('settings-save-btn').addEventListener('click', saveSettings);
 
   switchTab('dashboard');
@@ -102,6 +104,7 @@ function refreshCurrentTab() {
   if (currentTab === 'customers') loadCustomers();
   if (currentTab === 'schedule') loadSchedule();
   if (currentTab === 'captions') loadCaptions();
+  if (currentTab === 'broadcast') loadBroadcastTab();
   if (currentTab === 'settings') loadSettings();
 }
 
@@ -163,25 +166,44 @@ async function loadDashboard() {
   }
 
   const runs = await api.get('/api/runs');
-  document.getElementById('run-log').innerHTML = `
-    <table class="table">
-      <thead><tr><th>Slot</th><th>Durum</th><th>Basladi</th><th>Gonderim</th><th>Hata</th><th>Detay</th></tr></thead>
-      <tbody>
-        ${runs.map((r) => `<tr><td>${r.slot_name}</td><td>${r.finished_at ? '<span class="pill ok">bitti</span>' : '<span class="pill warn">devam ediyor</span>'}</td><td>${r.started_at}</td><td>${r.sent_count}</td><td>${r.error_count}</td><td class="small">${formatRunDetails(r.details)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Henuz calisma yok</td></tr>'}
-      </tbody>
-    </table>
+  document.getElementById('run-log').innerHTML = runs.map(renderRunCard).join('') || '<p class="muted small">Henuz calisma yok</p>';
+}
+
+const KIND_LABELS = { slot: 'Fotograf Gonderimi', broadcast: 'Toplu Mesaj' };
+
+function renderRunCard(r) {
+  const inProgress = !r.finished_at;
+  const kindLabel = KIND_LABELS[r.kind] || r.kind || r.slot_name;
+  const total = r.total_targets || 0;
+  const done = r.processed_targets || 0;
+  const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : (inProgress ? 0 : 100);
+  const events = Array.isArray(r.details) ? r.details : [];
+  const eventsHtml = events.slice(-40).reverse().map((ev) => {
+    if (typeof ev === 'string') return `<div class="ev"><span>${escapeHtml(ev)}</span></div>`;
+    return `<div class="ev"><span class="ev-time">${escapeHtml(ev.t || '')}</span><span>${ev.icon || ''} ${escapeHtml(ev.text || '')}</span></div>`;
+  }).join('') || '<div class="muted small">Henuz kayit yok</div>';
+
+  return `
+    <div class="run-card">
+      <div class="run-head">
+        <div>
+          <strong>${escapeHtml(kindLabel)}</strong>
+          <span class="muted small">(${escapeHtml(r.slot_name)}) - basladi: ${escapeHtml(r.started_at)}</span>
+        </div>
+        ${inProgress ? '<span class="pill warn">devam ediyor</span>' : (r.error_count > 0 ? '<span class="pill bad">hatali bitti</span>' : '<span class="pill ok">bitti</span>')}
+      </div>
+      ${total > 0 ? `
+        <div class="progress-bar"><div style="width:${pct}%"></div></div>
+        <div class="muted small">${done}/${total} musteri islendi - ${pct}%</div>
+      ` : ''}
+      <div class="muted small" style="margin:6px 0;">Gonderim: <b>${r.sent_count}</b> &nbsp; Hata: <b>${r.error_count}</b></div>
+      <div class="run-events">${eventsHtml}</div>
+    </div>
   `;
 }
 
-function formatRunDetails(details) {
-  if (!details) return '';
-  const list = Array.isArray(details) ? details : [details];
-  if (!list.length) return '';
-  return list.map((line) => escapeHtml(String(line))).join('<br/>');
-}
-
 function escapeHtml(str) {
-  return str.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  return String(str).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 
 let waPolling = null;
@@ -290,11 +312,8 @@ async function loadSchedule() {
         <label>Saat (24s, HH:MM)
           <input type="text" data-field="time" value="${s.time}" />
         </label>
-        <label>Musteri sayisi
+        <label>Musteri sayisi (bu calismada)
           <input type="number" min="0" data-field="customer_count" value="${s.customer_count}" />
-        </label>
-        <label>Musteri basina fotograf
-          <input type="number" min="1" data-field="photos_per_customer" value="${s.photos_per_customer}" />
         </label>
         <label>WhatsApp
           <input type="checkbox" data-field="platform_whatsapp" ${s.platforms.includes('whatsapp') ? 'checked' : ''} />
@@ -302,14 +321,26 @@ async function loadSchedule() {
         <label>Telegram
           <input type="checkbox" data-field="platform_telegram" ${s.platforms.includes('telegram') ? 'checked' : ''} />
         </label>
-        <label>Mesaj sablonu da gonder
-          <input type="checkbox" data-field="use_caption" ${s.use_caption ? 'checked' : ''} />
-        </label>
       </div>
-      <button class="slot-save-btn">Kaydet</button>
-      <span class="muted small slot-save-result"></span>
+
+      <p class="muted small" style="margin-top:14px;">Gonderim sirasi: her secili musteri icin bu adimlar yukaridan asagiya sirayla calisir (orn. 20 foto -> indirim mesaji -> 20 foto -> yeni koleksiyon mesaji).</p>
+      <div class="steps-editor" data-slot="${s.name}"></div>
+      <button class="step-add-btn ghost" data-slot="${s.name}">+ Adim ekle</button>
+
+      <div class="btn-row">
+        <button class="slot-save-btn">Kaydet</button>
+        <span class="muted small slot-save-result"></span>
+      </div>
     </div>
   `).join('');
+
+  for (const s of slots) {
+    await loadSlotSteps(s.name);
+  }
+
+  card.querySelectorAll('.step-add-btn').forEach((btn) => {
+    btn.addEventListener('click', () => addStepRow(btn.dataset.slot, { type: 'photos', photo_count: 5, message_mode: 'random_caption', message_text: '' }));
+  });
 
   card.querySelectorAll('.slot-block').forEach((block) => {
     block.querySelector('.slot-save-btn').addEventListener('click', async () => {
@@ -322,14 +353,102 @@ async function loadSchedule() {
         enabled: get('enabled').checked ? 1 : 0,
         time: get('time').value.trim(),
         customer_count: parseInt(get('customer_count').value, 10) || 0,
-        photos_per_customer: parseInt(get('photos_per_customer').value, 10) || 1,
-        platforms: platforms.join(','),
-        use_caption: get('use_caption').checked ? 1 : 0
+        platforms: platforms.join(',')
       };
-      await api.put(`/api/slots/${name}`, payload);
-      block.querySelector('.slot-save-result').textContent = 'Kaydedildi.';
-      setTimeout(() => { block.querySelector('.slot-save-result').textContent = ''; }, 2000);
+      try {
+        await api.put(`/api/slots/${name}`, payload);
+        const steps = collectStepsFromEditor(name);
+        await api.put(`/api/slots/${name}/steps`, { steps });
+        block.querySelector('.slot-save-result').textContent = 'Kaydedildi.';
+      } catch (e) {
+        block.querySelector('.slot-save-result').textContent = 'Hata: ' + e.message;
+      }
+      setTimeout(() => { block.querySelector('.slot-save-result').textContent = ''; }, 3000);
     });
+  });
+}
+
+async function loadSlotSteps(slotName) {
+  const steps = await api.get(`/api/slots/${slotName}/steps`);
+  const editor = document.querySelector(`.steps-editor[data-slot="${slotName}"]`);
+  editor.innerHTML = '';
+  (steps.length ? steps : [{ type: 'photos', photo_count: 5, message_mode: 'random_caption', message_text: '' }])
+    .forEach((step) => appendStepRow(editor, step));
+}
+
+function appendStepRow(editor, step) {
+  const row = document.createElement('div');
+  row.className = 'step-row';
+  const num = editor.children.length + 1;
+  row.innerHTML = `
+    <div class="step-num">${num}</div>
+    <div class="step-fields">
+      <select data-field="type">
+        <option value="photos" ${step.type === 'photos' ? 'selected' : ''}>Fotograf Blogu</option>
+        <option value="message" ${step.type === 'message' ? 'selected' : ''}>Mesaj Blogu</option>
+      </select>
+      <input type="number" min="1" data-field="photo_count" value="${step.photo_count || 1}" placeholder="Adet" style="width:90px; ${step.type === 'message' ? 'display:none;' : ''}" />
+      <select data-field="message_mode" style="${step.type === 'photos' ? 'display:none;' : ''}">
+        <option value="random_caption" ${step.message_mode !== 'custom' ? 'selected' : ''}>Rastgele sablondan sec</option>
+        <option value="custom" ${step.message_mode === 'custom' ? 'selected' : ''}>Ozel metin yaz</option>
+      </select>
+      <button class="step-up ghost" title="Yukari tasi">↑</button>
+      <button class="step-down ghost" title="Asagi tasi">↓</button>
+      <button class="step-del danger" title="Sil">Sil</button>
+    </div>
+    <textarea data-field="message_text" placeholder="Ozel mesaj metni" style="${step.type === 'message' && step.message_mode === 'custom' ? '' : 'display:none;'}">${step.message_text || ''}</textarea>
+  `;
+
+  const typeSel = row.querySelector('[data-field="type"]');
+  const countInput = row.querySelector('[data-field="photo_count"]');
+  const modeSel = row.querySelector('[data-field="message_mode"]');
+  const textArea = row.querySelector('[data-field="message_text"]');
+
+  function syncVisibility() {
+    const isMessage = typeSel.value === 'message';
+    countInput.style.display = isMessage ? 'none' : '';
+    modeSel.style.display = isMessage ? '' : 'none';
+    textArea.style.display = isMessage && modeSel.value === 'custom' ? '' : 'none';
+  }
+  typeSel.addEventListener('change', syncVisibility);
+  modeSel.addEventListener('change', syncVisibility);
+
+  row.querySelector('.step-del').addEventListener('click', () => { row.remove(); renumberSteps(editor); });
+  row.querySelector('.step-up').addEventListener('click', () => {
+    const prev = row.previousElementSibling;
+    if (prev) editor.insertBefore(row, prev);
+    renumberSteps(editor);
+  });
+  row.querySelector('.step-down').addEventListener('click', () => {
+    const next = row.nextElementSibling;
+    if (next) editor.insertBefore(next, row);
+    renumberSteps(editor);
+  });
+
+  editor.appendChild(row);
+}
+
+function addStepRow(slotName, step) {
+  const editor = document.querySelector(`.steps-editor[data-slot="${slotName}"]`);
+  appendStepRow(editor, step);
+}
+
+function renumberSteps(editor) {
+  editor.querySelectorAll('.step-row').forEach((row, idx) => {
+    row.querySelector('.step-num').textContent = idx + 1;
+  });
+}
+
+function collectStepsFromEditor(slotName) {
+  const editor = document.querySelector(`.steps-editor[data-slot="${slotName}"]`);
+  return Array.from(editor.querySelectorAll('.step-row')).map((row) => {
+    const type = row.querySelector('[data-field="type"]').value;
+    return {
+      type,
+      photo_count: parseInt(row.querySelector('[data-field="photo_count"]').value, 10) || 1,
+      message_mode: row.querySelector('[data-field="message_mode"]').value,
+      message_text: row.querySelector('[data-field="message_text"]').value
+    };
   });
 }
 
@@ -337,6 +456,40 @@ async function loadSchedule() {
 async function loadCaptions() {
   renderCaptionList('whatsapp', 'cap-wa-list');
   renderCaptionList('telegram', 'cap-tg-list');
+  loadPreview();
+}
+
+async function loadPreview() {
+  let photo = null;
+  try {
+    const batches = await api.get('/api/photos/batches');
+    const active = batches.find((b) => b.status === 'active');
+    if (active && active.photo_count > 0) {
+      const photos = await api.get(`/api/photos/batches/${active.id}/photos`);
+      photo = photos[0] || null;
+    }
+  } catch (e) { /* onizleme icin kritik degil */ }
+
+  for (const platform of ['whatsapp', 'telegram']) {
+    const box = document.getElementById(`preview-${platform}`);
+    let captionText = '';
+    try {
+      const caps = await api.get(`/api/captions/${platform}`);
+      const active = caps.filter((c) => c.active);
+      if (active.length) captionText = active[Math.floor(Math.random() * active.length)].text;
+    } catch (e) { /* onemli degil */ }
+
+    if (!photo && !captionText) {
+      box.innerHTML = '<div class="empty">Henuz fotograf veya mesaj sablonu yok.</div>';
+      continue;
+    }
+    box.innerHTML = `
+      <div class="bubble">
+        ${photo ? `<img src="/api/photos/file/${encodeURI(photo.filepath)}" alt="onizleme" />` : ''}
+        ${captionText ? `<div class="cap-text">${escapeHtml(captionText)}</div>` : ''}
+      </div>
+    `;
+  }
 }
 
 async function renderCaptionList(platform, listId) {
@@ -373,6 +526,37 @@ async function addCaption(platform) {
   loadCaptions();
 }
 
+// ---------- Toplu Mesaj (Broadcast) ----------
+async function loadBroadcastTab() {
+  const customers = await api.get('/api/customers');
+  const box = document.getElementById('bc-customers');
+  box.innerHTML = customers.map((c) => `
+    <li>
+      <label class="small" style="display:flex; gap:8px; align-items:center;">
+        <input type="checkbox" class="bc-cust-check" value="${c.id}" />
+        ${escapeHtml(c.name)} <span class="muted">(${c.platform}${c.whatsapp_number ? ', WA: ' + escapeHtml(c.whatsapp_number) : ''}${c.telegram_chat_id ? ', TG baglandi' : ''})</span>
+      </label>
+    </li>
+  `).join('') || '<li class="muted">Musteri yok</li>';
+}
+
+async function sendBroadcast() {
+  const platform = document.getElementById('bc-platform').value;
+  const text = document.getElementById('bc-text').value.trim();
+  const resultBox = document.getElementById('bc-result');
+  if (!text) { resultBox.textContent = 'Mesaj metni bos olamaz'; return; }
+  const customerIds = Array.from(document.querySelectorAll('.bc-cust-check:checked')).map((el) => parseInt(el.value, 10));
+
+  resultBox.textContent = 'Gonderiliyor...';
+  try {
+    await api.post('/api/broadcast', { platform, text, customerIds: customerIds.length ? customerIds : undefined });
+    resultBox.textContent = 'Basladi. Ilerlemeyi "Panel" sekmesindeki Son Calismalar bolumunden izleyebilirsin.';
+    document.getElementById('bc-text').value = '';
+  } catch (e) {
+    resultBox.textContent = 'Hata: ' + e.message;
+  }
+}
+
 // ---------- Settings ----------
 const SETTINGS_FIELDS = [
   { key: 'delay_min_sec', label: 'Min gecikme (sn)', type: 'number' },
@@ -382,7 +566,8 @@ const SETTINGS_FIELDS = [
   { key: 'warmup_enabled', label: 'Isinma modu aktif (true/false)', type: 'text' },
   { key: 'warmup_days', label: 'Isinma suresi (gun)', type: 'number' },
   { key: 'warmup_max_per_day', label: 'Isinmada gunluk max WhatsApp', type: 'number' },
-  { key: 'admin_telegram_chat_id', label: 'Admin Telegram chat id (bildirim icin)', type: 'text' }
+  { key: 'admin_telegram_chat_id', label: 'Admin Telegram chat id (rapor/hata bildirimi icin, bota /myid yazarak ogrenebilirsin)', type: 'text' },
+  { key: 'admin_notify_enabled', label: 'Admin Telegram bildirimleri aktif (true/false)', type: 'text' }
 ];
 
 async function loadSettings() {

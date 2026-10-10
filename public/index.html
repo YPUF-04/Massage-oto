@@ -28,6 +28,7 @@
       <button data-tab="customers" class="tab-btn">Musteriler</button>
       <button data-tab="schedule" class="tab-btn">Zamanlama</button>
       <button data-tab="captions" class="tab-btn">Mesajlar</button>
+      <button data-tab="broadcast" class="tab-btn">Toplu Mesaj</button>
       <button data-tab="settings" class="tab-btn">Ayarlar</button>
     </nav>
     <button id="logout-btn" class="ghost">Cikis</button>
@@ -135,6 +136,44 @@
           </div>
           <ul id="cap-tg-list" class="list"></ul>
         </div>
+      </div>
+
+      <div class="card">
+        <h3>Onizleme (Simulasyon)</h3>
+        <p class="muted small">Gercek gonderim yapilmaz. Su an yuklu olan ilk fotograf ve rastgele secilen bir mesaj sablonu ile nasil gorunecegini gosterir.</p>
+        <div class="grid">
+          <div>
+            <p class="muted small">WhatsApp</p>
+            <div id="preview-whatsapp" class="phone-preview wa"></div>
+          </div>
+          <div>
+            <p class="muted small">Telegram</p>
+            <div id="preview-telegram" class="phone-preview tg"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-broadcast" class="tab-panel" style="display:none;">
+      <div class="card">
+        <h3>Toplu Mesaj Gonder (Fotografsiz)</h3>
+        <p class="muted small">Zamanlamadan bagimsiz, istedigin an secilen musterilere sadece metin mesaji gonderir. Ayni gecikme ve gunluk limit ayarlarina uyar.</p>
+        <div class="form-grid">
+          <label>Platform
+            <select id="bc-platform">
+              <option value="whatsapp">WhatsApp</option>
+              <option value="telegram">Telegram</option>
+              <option value="both">Her ikisi</option>
+            </select>
+          </label>
+        </div>
+        <textarea id="bc-text" rows="4" placeholder="Mesaj metni" style="width:100%;"></textarea>
+        <div class="card" style="margin-top:10px;">
+          <p class="muted small">Musteriler (hicbiri secilmezse, platforma uygun TUM aktif musterilere gonderilir)</p>
+          <div id="bc-customers" class="list" style="max-height:220px; overflow:auto;"></div>
+        </div>
+        <button id="bc-send-btn" style="margin-top:10px;">Gonder</button>
+        <div id="bc-result" class="muted small"></div>
       </div>
     </section>
 

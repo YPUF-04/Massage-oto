@@ -5,13 +5,18 @@ Musterilere WhatsApp ve Telegram uzerinden otomatik, rastgele fotograf ve mesaj 
 ## Ozellikler
 
 - **WhatsApp**: Baileys kutuphanesi ile kendi numarandan, ucretsiz (resmi API degil, QR ile baglanilir).
-- **Telegram**: Resmi Bot API, tamamen ucretsiz ve ban riski yok.
-- **3 zamanlama dilimi** (sabah/ogle/aksam): her biri icin ayri saat, musteri sayisi, musteri basina fotograf sayisi ve platform (WhatsApp/Telegram) secimi.
+- **Telegram**: Resmi Bot API, tamamen ucretsiz ve ban riski yok. Ayrica admin'e rapor/hata bildirimi gondermek icin de kullanilir.
+- **3 zamanlama dilimi** (sabah/ogle/aksam): her biri icin ayri saat, musteri sayisi ve platform (WhatsApp/Telegram) secimi.
+- **Adim sirasi (sequence)**: Her slot icin kendi sirani kurarsin - orn. "20 foto -> indirim mesaji -> 20 foto daha -> yeni koleksiyon mesaji". Foto ve mesaj bloklarini istedigin sirada, istedigin sayida ekleyip sirala; her secili musteri icin bu sira yukaridan asagiya calisir.
+- **Toplu Mesaj**: Zamanlamadan bagimsiz, istedigin an secilen (veya tum) musterilere sadece metin mesaji gonderebilirsin (fotografsiz duyuru/hatirlatma icin).
 - **Tekrarsiz rastgele gonderim**: Bir musteriye once gonderilen fotograf tekrar gonderilmez.
 - **Otomatik arsivleme**: Aktif havuzdaki tum fotograflar tum musterilere gonderildiginde, o havuz arsive tasinir (dosyalar `storage/uploads/archive/batch-<id>/` icine), yeni fotograf yuklemen icin bos bir aktif havuz olusur.
-- **Platform bazli mesaj sablonlari**: WhatsApp ve Telegram icin ayri ayri, rastgele secilen indirim/bilgi metinleri (fotografin altina caption olarak eklenir).
+- **Platform bazli mesaj sablonlari**: WhatsApp ve Telegram icin ayri ayri, rastgele secilen indirim/bilgi metinleri.
+- **Onizleme (simulasyon)**: "Mesajlar" sekmesinde, gercek gonderim yapmadan WhatsApp ve Telegram baloncuk gorunumunde nasil gorunecegini gorursun.
+- **Canli izleme**: Her calisma ikonlu, zaman damgali, ilerleme cubuklu olarak aninda panelde goruntulenir (kac musteri islendi, hangi adimda, kim hata aldi).
+- **Admin Telegram bildirimleri**: Bir calisma hata verince ve her calisma bitince, admin'in Telegram'ina otomatik rapor gider (kac gonderim, kac hata, ne kadar surdu).
 - **Ban riskini dusurme ayarlari**: gonderimler arasi rastgele gecikme, gunluk gonderim tavani, yeni WhatsApp numarasi icin "isinma modu" (ilk gunler daha az mesaj).
-- **Admin paneli**: Sifre korumali web paneli; WhatsApp QR baglama, musteri yonetimi, fotograf yukleme, zamanlama ve mesaj sablonu ayarlari, gonderim gecmisi hepsi buradan.
+- **Admin paneli**: Sifre korumali web paneli; WhatsApp QR baglama, musteri yonetimi, fotograf yukleme, zamanlama/adim sirasi ve mesaj sablonu ayarlari, gonderim gecmisi hepsi buradan.
 
 ## Onemli: WhatsApp riski hakkinda
 
@@ -63,15 +68,23 @@ Panelin "Musteriler" sekmesinden isim, WhatsApp numarasi (ulke kodu ile, orn. `9
 - Acik/kapali
 - Saat (24 saat formati, `HH:MM`)
 - Bu slotta kac musteriye gonderim yapilacagi
-- Musteri basina kac fotograf gonderilecegi
 - WhatsApp/Telegram'dan hangisinin aktif olacagi (orn. "bugun sadece Telegram'dan gonder" icin WhatsApp'i o slotta kapatabilirsin)
-- Fotografla birlikte rastgele bir mesaj sablonu gonderilsin mi
 
-Degisiklikler aninda etkili olur, sunucuyu yeniden baslatmana gerek yok. "Panel" sekmesinden istedigin slotu elle de "simdi calistir" ile tetikleyebilirsin.
+Her slotun altinda bir **adim sirasi (step)** editoru var. Burada "Fotograf Blogu" veya "Mesaj Blogu" ekleyip siralayabilirsin:
+- **Fotograf Blogu**: kac fotograf gonderilecegini yazarsin (orn. 20).
+- **Mesaj Blogu**: rastgele bir mesaj sablonundan mi secilecek, yoksa senin yazdigin sabit bir metin mi gonderilecek, onu secersin.
+
+Ornek: "20 foto -> indirim mesaji -> 20 foto daha -> yeni koleksiyon mesaji" yapmak icin sirayla 4 adim eklersin: Fotograf(20) -> Mesaj(ozel: "Indirim var!") -> Fotograf(20) -> Mesaj(ozel: "Yeni koleksiyon!"). Bu sira, o slotta secilen HER musteri icin yukaridan asagiya calisir. Adimlari ok butonlariyla yukari/asagi tasiyabilir, "Sil" ile kaldirabilirsin.
+
+Degisiklikler "Kaydet" butonuna basinca etkili olur, sunucuyu yeniden baslatmana gerek yok. "Panel" sekmesinden istedigin slotu elle de "simdi calistir" ile tetikleyebilirsin.
+
+## Toplu Mesaj
+
+"Toplu Mesaj" sekmesinden, zamanlamadan bagimsiz olarak istedigin an secilen musterilere (veya hicbirini secmezsen platforma uygun tum aktif musterilere) sadece metin mesaji gonderebilirsin. Fotograf gonderimiyle ayni gecikme ve gunluk limit ayarlarina uyar, "Panel" sekmesinde ayni canli gorunumle takip edilir.
 
 ## Mesaj Sablonlari
 
-"Mesajlar" sekmesinde WhatsApp ve Telegram icin ayri ayri metin listeleri olusturabilirsin (orn. indirim duyurulari). Gonderim sirasinda bu listeden rastgele biri secilip son fotografin altina caption olarak eklenir. Her metni ayri ayri aktif/pasif yapabilir veya silebilirsin.
+"Mesajlar" sekmesinde WhatsApp ve Telegram icin ayri ayri metin listeleri olusturabilirsin (orn. indirim duyurulari). Bu sablonlar, adim sirasinda "rastgele sablondan sec" secilen mesaj bloklarinda kullanilir. Her metni ayri ayri aktif/pasif yapabilir veya silebilirsin. Ayni sekmenin altinda, gercek gonderim yapmadan WhatsApp ve Telegram'da nasil gorunecegini gosteren bir **onizleme** bulunur.
 
 ## Ayarlar
 
@@ -145,7 +158,8 @@ src/
     settingsService.js    Ayarlar, slotlar, mesaj sablonlari
     customerService.js    Musteri CRUD
     photoService.js        Fotograf/arsiv yonetimi, rastgele secim
-    campaignService.js     Gonderim motoru: secim, gonderim, limit/isinma, tamamlanma/arsivleme
+    campaignService.js     Gonderim motoru: adim sirasi, secim, gonderim, limit/isinma, tamamlanma/arsivleme
+    adminNotify.js          Admin'e Telegram uzerinden rapor/hata bildirimi
   whatsapp/baileysClient.js  Baileys baglanti ve gonderim
   telegram/telegramClient.js Telegram Bot API (fetch ile, ekstra bagimlilik yok)
   scheduler/scheduler.js     Dakikada bir slot saatlerini kontrol eden zamanlayici
