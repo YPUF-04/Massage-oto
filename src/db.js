@@ -148,8 +148,8 @@ function seedDefaults() {
   }
 
   const defaultSettings = {
-    delay_min_sec: '20',
-    delay_max_sec: '90',
+    delay_min_sec: '5',
+    delay_max_sec: '15',
     intra_step_delay_min_sec: '1',
     intra_step_delay_max_sec: '3',
     warmup_enabled: 'true',
