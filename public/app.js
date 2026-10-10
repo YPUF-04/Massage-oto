@@ -645,7 +645,8 @@ const SETTINGS_FIELDS = [
   { key: 'warmup_days', label: 'Isinma suresi (gun)', type: 'number' },
   { key: 'warmup_max_per_day', label: 'Isinmada gunluk max WhatsApp', type: 'number' },
   { key: 'admin_telegram_chat_id', label: 'Admin Telegram chat id (rapor/hata bildirimi icin, bota /myid yazarak ogrenebilirsin)', type: 'text' },
-  { key: 'admin_notify_enabled', label: 'Admin Telegram bildirimleri aktif (true/false)', type: 'text' }
+  { key: 'admin_notify_enabled', label: 'Admin Telegram bildirimleri aktif (true/false)', type: 'text' },
+  { key: 'force_single_photo_send', label: 'Telegram foto gruplamayi kapat, tek tek gonder (true/false; false=normal, 10-10 gruplanir)', type: 'text' }
 ];
 
 async function loadSettings() {

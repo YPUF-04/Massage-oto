@@ -184,10 +184,13 @@ async function runStepsForCustomer(customer, platform, batch, steps, runId, push
       const photos = photoService.pickUnsentPhotosForCustomer(batch.id, customer.id, step.photo_count, step.category_ids);
       if (!photos.length) continue;
 
+      const forceSingle = settingsService.get('force_single_photo_send', 'false') === 'true';
+
       if (platform === 'telegram') {
         // Telegram'da fotograflari 10'arli gruplar halinde TEK mesaj (albüm)
         // olarak gonderiyoruz: 20 foto icin 2 API cagrisi, hizli ve dogal.
-        const chunks = chunkArray(photos, 10);
+        // "Tekli gonderim" ayari acikken gruplama kapatilir, grup boyutu 1 olur.
+        const chunks = chunkArray(photos, forceSingle ? 1 : 10);
         for (let c = 0; c < chunks.length; c++) {
           if (isCancelled(runId)) break;
           const chunk = chunks[c];

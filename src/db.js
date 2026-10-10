@@ -159,7 +159,8 @@ function seedDefaults() {
     admin_telegram_chat_id: '',
     admin_notify_enabled: 'true',
     daily_send_cap_whatsapp: '60',
-    daily_send_cap_telegram: '0'
+    daily_send_cap_telegram: '0',
+    force_single_photo_send: 'false'
   };
   const upsert = db.prepare(`
     INSERT INTO settings (key, value) VALUES (?, ?)
