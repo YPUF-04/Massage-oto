@@ -78,8 +78,14 @@
       <div class="card">
         <h3>Fotograf Yukle (Aktif Arsive Eklenir)</h3>
         <input id="photo-input" type="file" multiple accept="image/*" />
+        <input id="photo-categories" type="text" placeholder="Kategoriler (virgulle ayir, orn: Pantolon, Sweat, Ceket)" style="width:100%; margin-top:8px;" />
+        <p class="muted small">Yazdigin kategoriler yoksa otomatik olusturulur. Bos birakirsan fotograflar kategorisiz yuklenir (her adimda secilebilir).</p>
         <button id="photo-upload-btn">Yukle</button>
         <div id="photo-upload-result" class="muted small"></div>
+      </div>
+      <div class="card">
+        <h3>Kategoriler</h3>
+        <div id="categories-list" class="list"></div>
       </div>
       <div class="card">
         <h3>Arsivler</h3>
@@ -169,7 +175,11 @@
         </div>
         <textarea id="bc-text" rows="4" placeholder="Mesaj metni" style="width:100%;"></textarea>
         <div class="card" style="margin-top:10px;">
-          <p class="muted small">Musteriler (hicbiri secilmezse, platforma uygun TUM aktif musterilere gonderilir)</p>
+          <label class="small" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+            <input type="checkbox" id="bc-select-all" />
+            <strong>Tum Musteriler</strong>
+          </label>
+          <p class="muted small">Isaretlersen platforma uygun TUM aktif musterilere gonderilir. Isaretlemezsen asagidan tek tek secersin.</p>
           <div id="bc-customers" class="list" style="max-height:220px; overflow:auto;"></div>
         </div>
         <button id="bc-send-btn" style="margin-top:10px;">Gonder</button>

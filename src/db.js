@@ -104,7 +104,20 @@ CREATE TABLE IF NOT EXISTS slot_steps (
   type TEXT NOT NULL, -- photos | message
   photo_count INTEGER NOT NULL DEFAULT 1,
   message_mode TEXT NOT NULL DEFAULT 'random_caption', -- random_caption | custom
-  message_text TEXT
+  message_text TEXT,
+  category_ids TEXT -- JSON dizi, bos/null = tum kategoriler
+);
+
+CREATE TABLE IF NOT EXISTS categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS photo_categories (
+  photo_id INTEGER NOT NULL REFERENCES photos(id),
+  category_id INTEGER NOT NULL REFERENCES categories(id),
+  PRIMARY KEY (photo_id, category_id)
 );
 `);
 
@@ -120,6 +133,7 @@ function addColumnIfMissing(table, columnDef) {
 addColumnIfMissing('run_log', "kind TEXT NOT NULL DEFAULT 'slot'");
 addColumnIfMissing('run_log', 'total_targets INTEGER NOT NULL DEFAULT 0');
 addColumnIfMissing('run_log', 'processed_targets INTEGER NOT NULL DEFAULT 0');
+addColumnIfMissing('slot_steps', 'category_ids TEXT');
 
 function seedDefaults() {
   const slotCount = db.prepare('SELECT COUNT(*) AS c FROM slots').get().c;
@@ -136,6 +150,8 @@ function seedDefaults() {
   const defaultSettings = {
     delay_min_sec: '20',
     delay_max_sec: '90',
+    intra_step_delay_min_sec: '1',
+    intra_step_delay_max_sec: '3',
     warmup_enabled: 'true',
     warmup_days: '3',
     warmup_max_per_day: '10',

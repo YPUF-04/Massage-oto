@@ -56,8 +56,9 @@ Panelin "Musteriler" sekmesinden isim, WhatsApp numarasi (ulke kodu ile, orn. `9
 
 ## Fotograf Yukleme ve Arsiv Mantigi
 
-- "Fotograflar" sekmesinden istedigin kadar fotografi aktif havuza yukle (orn. 500 fotograf).
-- Sistem her zamanlama caliştiginda, o slotun ayarlarina gore (kac musteri, musteri basina kac fotograf) rastgele ve o musteriye daha once gonderilmemis fotograflari secer ve gonderir.
+- "Fotograflar" sekmesinden istedigin kadar fotografi aktif havuza yukle (orn. 500 fotograf). Yuklerken istersen kategori etiketi de yazabilirsin (orn. "Pantolon, Sweat, Ceket") - bir fotograf birden fazla kategoride olabilir.
+- Zamanlama adimlarinda (asagida) bir foto blogu icin "hangi kategori(ler)den gonderilsin" secebilirsin; sececegin kategorideki fotograflardan rastgele secilir. Kategori secmezsen tum fotograflardan secilir.
+- Sistem her zamanlama caliştiginda, o slotun ayarlarina gore rastgele ve o musteriye daha once gonderilmemis fotograflari secer ve gonderir (kategori farketmeksizin, bir musteriye ayni foto iki kez gitmez).
 - Bir musteri havuzdaki tum fotograflari aldiginda o musteri icin "tamamlandi" isaretlenir.
 - **Tum aktif musteriler** havuzdaki tum fotograflari aldiginda, havuz otomatik olarak `storage/uploads/archive/batch-<id>/` klasorune tasinir ve arsivlenmis olarak isaretlenir; yeni, bos bir aktif havuz olusur. Bu noktada yeni fotograflarini yukleyebilirsin.
 - Panelin "Panel" sekmesinde aktif havuzun ilerlemesini (hangi musteriye kac fotograf gitti) canli olarak gorebilirsin.
@@ -89,7 +90,8 @@ Degisiklikler "Kaydet" butonuna basinca etkili olur, sunucuyu yeniden baslatmana
 ## Ayarlar
 
 "Ayarlar" sekmesinde:
-- Gonderimler arasi rastgele gecikme araligi (saniye)
+- **Blok ici gecikme**: ayni blok icindeki (orn. 20 fotoluk bir blok) gonderimler arasi kisa bekleme. Hizli gonderim icin kucuk tutulur (varsayilan 1-3 sn).
+- **Bloklar/musteriler arasi gecikme**: bir blok (foto grubu veya mesaj) bitince, siradaki bloga ya da siradaki musteriye gecmeden once uygulanan buyuk bekleme (varsayilan 20-90 sn). Ban riskini dusuren asil ayar budur, kucuk tutma.
 - WhatsApp / Telegram gunluk gonderim tavani (0 = limitsiz)
 - Isinma modu (yeni baglanan WhatsApp numarasi icin ilk N gun daha dusuk gunluk limit)
 - Admin bildirim icin Telegram chat id'si (botuna `/myid` yazarak kendi chat id'ni ogrenebilirsin)

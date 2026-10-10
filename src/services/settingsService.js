@@ -56,10 +56,21 @@ function getSlotByName(name) {
 function getSlotSteps(slotName) {
   const slot = getSlotByName(slotName);
   if (!slot) return [];
-  return db.prepare('SELECT * FROM slot_steps WHERE slot_id = ? ORDER BY position ASC').all(slot.id);
+  const rows = db.prepare('SELECT * FROM slot_steps WHERE slot_id = ? ORDER BY position ASC').all(slot.id);
+  return rows.map((r) => ({ ...r, category_ids: safeParseIds(r.category_ids) }));
 }
 
-// steps: [{ type: 'photos'|'message', photo_count, message_mode: 'random_caption'|'custom', message_text }]
+function safeParseIds(json) {
+  if (!json) return [];
+  try {
+    const arr = JSON.parse(json);
+    return Array.isArray(arr) ? arr.map(Number).filter((n) => Number.isFinite(n)) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// steps: [{ type: 'photos'|'message', photo_count, message_mode: 'random_caption'|'custom', message_text, category_ids }]
 function replaceSlotSteps(slotName, steps) {
   const slot = getSlotByName(slotName);
   if (!slot) throw new Error(`Slot bulunamadi: ${slotName}`);
@@ -68,18 +79,20 @@ function replaceSlotSteps(slotName, steps) {
   const tx = db.transaction(() => {
     db.prepare('DELETE FROM slot_steps WHERE slot_id = ?').run(slot.id);
     const insert = db.prepare(`
-      INSERT INTO slot_steps (slot_id, position, type, photo_count, message_mode, message_text)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO slot_steps (slot_id, position, type, photo_count, message_mode, message_text, category_ids)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     steps.forEach((step, idx) => {
       const type = step.type === 'message' ? 'message' : 'photos';
       const photoCount = Math.max(1, parseInt(step.photo_count, 10) || 1);
       const messageMode = step.message_mode === 'custom' ? 'custom' : 'random_caption';
       const messageText = messageMode === 'custom' ? String(step.message_text || '').trim() : null;
+      const categoryIds = Array.isArray(step.category_ids) ? step.category_ids.map(Number).filter((n) => Number.isFinite(n)) : [];
+      const categoryIdsJson = categoryIds.length ? JSON.stringify(categoryIds) : null;
       if (type === 'message' && messageMode === 'custom' && !messageText) {
         throw new Error(`${idx + 1}. adim: ozel mesaj metni bos olamaz`);
       }
-      insert.run(slot.id, idx, type, photoCount, messageMode, messageText);
+      insert.run(slot.id, idx, type, photoCount, messageMode, messageText, categoryIdsJson);
     });
   });
   tx();

@@ -10,9 +10,23 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function randomDelayMs() {
+// Bloklar arasi (bir foto blogu/mesaj blogu bitince, siradaki adima veya
+// siradaki musteriye gecmeden once) uygulanan buyuk, anti-ban gecikmesi.
+function randomStepDelayMs() {
   const min = parseInt(settingsService.get('delay_min_sec', '20'), 10);
   const max = parseInt(settingsService.get('delay_max_sec', '90'), 10);
+  const lo = Math.min(min, max);
+  const hi = Math.max(min, max);
+  const seconds = lo + Math.random() * (hi - lo);
+  return Math.round(seconds * 1000);
+}
+
+// Ayni foto blogu icindeki fotograflar arasi kisa gecikme. Amac anti-ban
+// degil, platformun ani (burst) istek sinirina takilmamak. Hizli gonderim
+// istendigi icin kucuk tutulur.
+function randomIntraStepDelayMs() {
+  const min = parseInt(settingsService.get('intra_step_delay_min_sec', '1'), 10);
+  const max = parseInt(settingsService.get('intra_step_delay_max_sec', '3'), 10);
   const lo = Math.min(min, max);
   const hi = Math.max(min, max);
   const seconds = lo + Math.random() * (hi - lo);
@@ -103,9 +117,10 @@ async function runStepsForCustomer(customer, platform, batch, steps, runId, push
 
   for (const step of steps) {
     if (step.type === 'photos') {
-      const photos = photoService.pickUnsentPhotosForCustomer(batch.id, customer.id, step.photo_count);
+      const photos = photoService.pickUnsentPhotosForCustomer(batch.id, customer.id, step.photo_count, step.category_ids);
       if (!photos.length) continue;
-      for (const photo of photos) {
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
         const absPath = photoService.absolutePath(photo.filepath);
         if (platform === 'whatsapp') await whatsapp.sendImage(target, absPath, null);
         else await telegram.sendPhoto(target, absPath, null);
@@ -113,9 +128,12 @@ async function runStepsForCustomer(customer, platform, batch, steps, runId, push
         db.prepare('INSERT INTO sent_log (customer_id, photo_id, batch_id, platform) VALUES (?, ?, ?, ?)')
           .run(customer.id, photo.id, batch.id, platform);
         sentPhotos++;
-        pushItemEvent('🖼️', `${customer.name} (${platform}): foto gonderildi`);
-        await sleep(randomDelayMs());
+        pushItemEvent('🖼️', `${customer.name} (${platform}): foto gonderildi (${i + 1}/${photos.length})`);
+        // Blok icinde hizli gonderim: fotograflar arasinda sadece kisa bir bekleme var.
+        if (i < photos.length - 1) await sleep(randomIntraStepDelayMs());
       }
+      // Blok bitti: siradaki adima/musteriye gecmeden once buyuk (anti-ban) bekleme.
+      await sleep(randomStepDelayMs());
     } else if (step.type === 'message') {
       const text = step.message_mode === 'custom'
         ? step.message_text
@@ -131,7 +149,7 @@ async function runStepsForCustomer(customer, platform, batch, steps, runId, push
         .run(customer.id, platform, text, runId);
       sentMessages++;
       pushItemEvent('💬', `${customer.name} (${platform}): mesaj gonderildi - "${text.slice(0, 40)}${text.length > 40 ? '...' : ''}"`);
-      await sleep(randomDelayMs());
+      await sleep(randomStepDelayMs());
     }
   }
 
@@ -370,7 +388,7 @@ async function executeBroadcast(runId, { platform, text, customerIds }) {
         }
         state.processedTargets++;
         writeRunProgress(runId, state, false);
-        await sleep(randomDelayMs());
+        await sleep(randomStepDelayMs());
       }
     }
   } catch (e) {

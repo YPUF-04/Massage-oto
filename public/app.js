@@ -226,14 +226,36 @@ async function loadPhotos() {
       <td>${b.photo_count}</td><td>${b.created_at}</td>
     </tr>
   `).join('') || '<tr><td colspan="5" class="muted">Arsiv yok</td></tr>';
+
+  loadCategoriesList();
+}
+
+async function loadCategoriesList() {
+  const cats = await api.get('/api/categories');
+  document.getElementById('categories-list').innerHTML = cats.map((c) => `
+    <li>
+      <span>${escapeHtml(c.name)} <span class="muted small">(${c.photo_count} foto)</span></span>
+      <button data-del-cat="${c.id}" class="danger">Sil</button>
+    </li>
+  `).join('') || '<li class="muted">Henuz kategori yok. Fotograf yuklerken olusturabilirsin.</li>';
+
+  document.querySelectorAll('[data-del-cat]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Kategori silinsin mi? Fotograflar silinmez, sadece etiket kaldirilir.')) return;
+      await api.del(`/api/categories/${btn.dataset.delCat}`);
+      loadCategoriesList();
+    });
+  });
 }
 
 async function uploadPhotos() {
   const input = document.getElementById('photo-input');
+  const categories = document.getElementById('photo-categories').value;
   const resultBox = document.getElementById('photo-upload-result');
   if (!input.files.length) { resultBox.textContent = 'Dosya secilmedi'; return; }
   const formData = new FormData();
   for (const f of input.files) formData.append('photos', f);
+  formData.append('categories', categories);
   resultBox.textContent = 'Yukleniyor...';
   try {
     const res = await fetch('/api/photos/upload', { method: 'POST', body: formData });
@@ -299,7 +321,9 @@ async function addCustomer() {
 }
 
 // ---------- Schedule ----------
+let allCategoriesCache = [];
 async function loadSchedule() {
+  allCategoriesCache = await api.get('/api/categories');
   const { slots } = await api.get('/api/settings');
   const card = document.getElementById('slots-card');
   card.innerHTML = slots.map((s) => `
@@ -380,6 +404,13 @@ function appendStepRow(editor, step) {
   const row = document.createElement('div');
   row.className = 'step-row';
   const num = editor.children.length + 1;
+  const stepCatIds = (step.category_ids || []).map(Number);
+  const catCheckboxes = allCategoriesCache.map((c) => `
+    <label class="small" style="display:inline-flex; gap:4px; align-items:center; margin-right:10px;">
+      <input type="checkbox" data-cat-id="${c.id}" ${stepCatIds.includes(c.id) ? 'checked' : ''} /> ${escapeHtml(c.name)}
+    </label>
+  `).join('') || '<span class="muted small">Henuz kategori yok (Fotograflar sekmesinden ekleyebilirsin)</span>';
+
   row.innerHTML = `
     <div class="step-num">${num}</div>
     <div class="step-fields">
@@ -396,6 +427,9 @@ function appendStepRow(editor, step) {
       <button class="step-down ghost" title="Asagi tasi">↓</button>
       <button class="step-del danger" title="Sil">Sil</button>
     </div>
+    <div class="step-categories muted small" style="margin-top:6px; ${step.type === 'message' ? 'display:none;' : ''}">
+      Kategori (secmezsen TUM fotograflardan): ${catCheckboxes}
+    </div>
     <textarea data-field="message_text" placeholder="Ozel mesaj metni" style="${step.type === 'message' && step.message_mode === 'custom' ? '' : 'display:none;'}">${step.message_text || ''}</textarea>
   `;
 
@@ -403,11 +437,13 @@ function appendStepRow(editor, step) {
   const countInput = row.querySelector('[data-field="photo_count"]');
   const modeSel = row.querySelector('[data-field="message_mode"]');
   const textArea = row.querySelector('[data-field="message_text"]');
+  const catBox = row.querySelector('.step-categories');
 
   function syncVisibility() {
     const isMessage = typeSel.value === 'message';
     countInput.style.display = isMessage ? 'none' : '';
     modeSel.style.display = isMessage ? '' : 'none';
+    catBox.style.display = isMessage ? 'none' : '';
     textArea.style.display = isMessage && modeSel.value === 'custom' ? '' : 'none';
   }
   typeSel.addEventListener('change', syncVisibility);
@@ -443,11 +479,13 @@ function collectStepsFromEditor(slotName) {
   const editor = document.querySelector(`.steps-editor[data-slot="${slotName}"]`);
   return Array.from(editor.querySelectorAll('.step-row')).map((row) => {
     const type = row.querySelector('[data-field="type"]').value;
+    const categoryIds = Array.from(row.querySelectorAll('[data-cat-id]:checked')).map((el) => parseInt(el.dataset.catId, 10));
     return {
       type,
       photo_count: parseInt(row.querySelector('[data-field="photo_count"]').value, 10) || 1,
       message_mode: row.querySelector('[data-field="message_mode"]').value,
-      message_text: row.querySelector('[data-field="message_text"]').value
+      message_text: row.querySelector('[data-field="message_text"]').value,
+      category_ids: categoryIds
     };
   });
 }
@@ -538,6 +576,19 @@ async function loadBroadcastTab() {
       </label>
     </li>
   `).join('') || '<li class="muted">Musteri yok</li>';
+
+  const selectAll = document.getElementById('bc-select-all');
+  selectAll.checked = false;
+  syncBroadcastCustomerBoxes();
+  selectAll.onchange = syncBroadcastCustomerBoxes;
+}
+
+function syncBroadcastCustomerBoxes() {
+  const selectAll = document.getElementById('bc-select-all').checked;
+  document.querySelectorAll('.bc-cust-check').forEach((el) => {
+    el.disabled = selectAll;
+    if (selectAll) el.checked = false;
+  });
 }
 
 async function sendBroadcast() {
@@ -545,7 +596,12 @@ async function sendBroadcast() {
   const text = document.getElementById('bc-text').value.trim();
   const resultBox = document.getElementById('bc-result');
   if (!text) { resultBox.textContent = 'Mesaj metni bos olamaz'; return; }
-  const customerIds = Array.from(document.querySelectorAll('.bc-cust-check:checked')).map((el) => parseInt(el.value, 10));
+  const allSelected = document.getElementById('bc-select-all').checked;
+  const customerIds = allSelected ? [] : Array.from(document.querySelectorAll('.bc-cust-check:checked')).map((el) => parseInt(el.value, 10));
+  if (!allSelected && !customerIds.length) {
+    resultBox.textContent = 'En az bir musteri sec veya "Tum Musteriler" isaretle';
+    return;
+  }
 
   resultBox.textContent = 'Gonderiliyor...';
   try {
@@ -559,8 +615,10 @@ async function sendBroadcast() {
 
 // ---------- Settings ----------
 const SETTINGS_FIELDS = [
-  { key: 'delay_min_sec', label: 'Min gecikme (sn)', type: 'number' },
-  { key: 'delay_max_sec', label: 'Max gecikme (sn)', type: 'number' },
+  { key: 'intra_step_delay_min_sec', label: 'Blok ici min gecikme (sn) - orn. 20 fotoluk blokta foto arasi', type: 'number' },
+  { key: 'intra_step_delay_max_sec', label: 'Blok ici max gecikme (sn)', type: 'number' },
+  { key: 'delay_min_sec', label: 'Bloklar/musteriler arasi min gecikme (sn) - anti-ban icin asil onemli olan budur', type: 'number' },
+  { key: 'delay_max_sec', label: 'Bloklar/musteriler arasi max gecikme (sn)', type: 'number' },
   { key: 'daily_send_cap_whatsapp', label: 'WhatsApp gunluk limit (0 = limitsiz)', type: 'number' },
   { key: 'daily_send_cap_telegram', label: 'Telegram gunluk limit (0 = limitsiz)', type: 'number' },
   { key: 'warmup_enabled', label: 'Isinma modu aktif (true/false)', type: 'text' },

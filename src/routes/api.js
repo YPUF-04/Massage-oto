@@ -7,6 +7,7 @@ const { requireAuth, login, logout, sessionStatus } = require('../auth/auth');
 const settingsService = require('../services/settingsService');
 const customerService = require('../services/customerService');
 const photoService = require('../services/photoService');
+const categoryService = require('../services/categoryService');
 const campaignService = require('../services/campaignService');
 const whatsapp = require('../whatsapp/baileysClient');
 const telegram = require('../telegram/telegramClient');
@@ -181,13 +182,33 @@ const upload = multer({ storage, limits: { fileSize: 15 * 1024 * 1024 } });
 
 router.post('/photos/upload', upload.array('photos', 100), (req, res) => {
   const filenames = (req.files || []).map((f) => f.filename);
-  const batch = photoService.addPhotos(filenames);
-  res.json({ ok: true, batch, uploaded: filenames.length });
+  const categories = categoryService.getOrCreateManyFromText(req.body.categories || '');
+  const categoryIds = categories.map((c) => c.id);
+  const batch = photoService.addPhotos(filenames, categoryIds);
+  res.json({ ok: true, batch, uploaded: filenames.length, categories });
 });
 
 router.get('/photos/batches', (req, res) => res.json(photoService.listBatches()));
 
-router.get('/photos/batches/:id/photos', (req, res) => res.json(photoService.listPhotosForBatch(req.params.id)));
+router.get('/photos/batches/:id/photos', (req, res) => {
+  const photos = photoService.listPhotosForBatch(req.params.id);
+  res.json(photos.map((p) => ({ ...p, categories: categoryService.getCategoriesForPhoto(p.id) })));
+});
+
+// --- Kategoriler ---
+router.get('/categories', (req, res) => res.json(categoryService.list()));
+
+router.post('/categories', (req, res) => {
+  const { name } = req.body || {};
+  const category = categoryService.getOrCreate(name);
+  if (!category) return res.status(400).json({ error: 'Kategori adi bos olamaz' });
+  res.json(category);
+});
+
+router.delete('/categories/:id', (req, res) => {
+  categoryService.remove(req.params.id);
+  res.json({ ok: true });
+});
 
 router.get('/photos/file/*', (req, res) => {
   const rel = req.params[0];
