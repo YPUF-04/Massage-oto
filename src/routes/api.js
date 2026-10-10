@@ -30,8 +30,8 @@ router.get('/status', (req, res) => {
     telegram: telegram.getStatus(),
     warmupActive: campaignService.isWarmupActive(),
     sentToday: {
-      whatsapp: campaignService.countSentToday('whatsapp'),
-      telegram: campaignService.countSentToday('telegram')
+      whatsapp: campaignService.countDistinctCustomersToday('whatsapp'),
+      telegram: campaignService.countDistinctCustomersToday('telegram')
     },
     dailyCap: {
       whatsapp: finiteOrNull(campaignService.dailyCapFor('whatsapp')),
@@ -44,6 +44,13 @@ router.get('/status', (req, res) => {
 
 router.get('/runs', (req, res) => {
   res.json(campaignService.getRecentRuns(30).map((r) => ({ ...r, details: safeParse(r.details) })));
+});
+
+router.post('/runs/:id/cancel', (req, res) => {
+  const runId = parseInt(req.params.id, 10);
+  const ok = campaignService.cancelRun(runId);
+  if (!ok) return res.status(400).json({ error: 'Bu calisma zaten bitmis veya bulunamadi' });
+  res.json({ ok: true });
 });
 
 function finiteOrNull(n) {

@@ -10,6 +10,31 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// Calisan (devam eden) run'lari ve iptal durumunu bellekte tutar. Sunucu
+// yeniden baslarsa bu bilgi sifirlanir, ama zaten o anda calisan bir islem
+// de kalmaz (process ile birlikte durur).
+const activeRuns = new Set();
+const cancelledRuns = new Set();
+
+function registerRun(runId) {
+  activeRuns.add(runId);
+}
+function unregisterRun(runId) {
+  activeRuns.delete(runId);
+  cancelledRuns.delete(runId);
+}
+function isCancelled(runId) {
+  return cancelledRuns.has(runId);
+}
+function cancelRun(runId) {
+  if (!activeRuns.has(runId)) return false;
+  cancelledRuns.add(runId);
+  return true;
+}
+function isRunActive(runId) {
+  return activeRuns.has(runId);
+}
+
 // Bloklar arasi (bir foto blogu/mesaj blogu bitince, siradaki adima veya
 // siradaki musteriye gecmeden once) uygulanan buyuk, anti-ban gecikmesi.
 function randomStepDelayMs() {
@@ -44,6 +69,29 @@ function countSentToday(platform) {
   const photoRow = db.prepare('SELECT COUNT(*) AS c FROM sent_log WHERE platform = ? AND sent_at >= ?').get(platform, since);
   const msgRow = db.prepare('SELECT COUNT(*) AS c FROM message_log WHERE platform = ? AND sent_at >= ?').get(platform, since);
   return photoRow.c + msgRow.c;
+}
+
+// Gunluk limit artik FOTOGRAF/MESAJ SAYISI degil, FARKLI MUSTERI SAYISI
+// uzerinden calisir: "bugun bu platformdan kac farkli musteriye ulasildi".
+// Ayni musteriye birden fazla foto/mesaj gitmesi bu sayiyi 1 kez arttirir.
+function countDistinctCustomersToday(platform) {
+  const since = todayRange();
+  const row = db.prepare(`
+    SELECT COUNT(DISTINCT customer_id) AS c FROM (
+      SELECT customer_id FROM sent_log WHERE platform = ? AND sent_at >= ?
+      UNION
+      SELECT customer_id FROM message_log WHERE platform = ? AND sent_at >= ?
+    )
+  `).get(platform, since, platform, since);
+  return row.c;
+}
+
+function wasCustomerContactedToday(customerId, platform) {
+  const since = todayRange();
+  const a = db.prepare('SELECT 1 FROM sent_log WHERE platform = ? AND customer_id = ? AND sent_at >= ? LIMIT 1').get(platform, customerId, since);
+  if (a) return true;
+  const b = db.prepare('SELECT 1 FROM message_log WHERE platform = ? AND customer_id = ? AND sent_at >= ? LIMIT 1').get(platform, customerId, since);
+  return !!b;
 }
 
 function isWarmupActive() {
@@ -116,10 +164,12 @@ async function runStepsForCustomer(customer, platform, batch, steps, runId, push
   let sentMessages = 0;
 
   for (const step of steps) {
+    if (isCancelled(runId)) break;
     if (step.type === 'photos') {
       const photos = photoService.pickUnsentPhotosForCustomer(batch.id, customer.id, step.photo_count, step.category_ids);
       if (!photos.length) continue;
       for (let i = 0; i < photos.length; i++) {
+        if (isCancelled(runId)) break;
         const photo = photos[i];
         const absPath = photoService.absolutePath(photo.filepath);
         if (platform === 'whatsapp') await whatsapp.sendImage(target, absPath, null);
@@ -218,7 +268,12 @@ async function executeRun(runId, slot) {
   }
 
   try {
+    platformLoop:
     for (const platform of platforms) {
+      if (isCancelled(runId)) {
+        pushEvent('🛑', 'Calisma kullanici tarafindan iptal edildi.');
+        break;
+      }
       if (platform === 'telegram') {
         const tgStatus = telegram.getStatus();
         if (tgStatus.status !== 'connected') {
@@ -235,9 +290,9 @@ async function executeRun(runId, slot) {
       }
 
       const cap = dailyCapFor(platform);
-      let remainingBudget = cap - countSentToday(platform);
-      if (remainingBudget <= 0) {
-        pushEvent('⏭️', `${platform}: gunluk limit doldu, atlandi`);
+      let remainingUserBudget = cap - countDistinctCustomersToday(platform);
+      if (remainingUserBudget <= 0) {
+        pushEvent('⏭️', `${platform}: gunluk farkli musteri limiti doldu, atlandi`);
         continue;
       }
 
@@ -255,8 +310,13 @@ async function executeRun(runId, slot) {
       pushEvent('📋', `${platform}: ${eligible.length} musteriye gonderim baslatiliyor`);
 
       for (const customer of eligible) {
-        if (remainingBudget <= 0) {
-          pushEvent('⏭️', `${platform}: gunluk limit doldu, kalan musteriler atlandi`);
+        if (isCancelled(runId)) {
+          pushEvent('🛑', 'Calisma kullanici tarafindan iptal edildi.');
+          break platformLoop;
+        }
+        const isNewToday = !wasCustomerContactedToday(customer.id, platform);
+        if (isNewToday && remainingUserBudget <= 0) {
+          pushEvent('⏭️', `${platform}: gunluk farkli musteri limiti doldu, kalan musteriler atlandi`);
           break;
         }
         pushEvent('▶️', `${customer.name} (${platform}): adim sirasi basladi (${steps.length} adim)`);
@@ -264,7 +324,7 @@ async function executeRun(runId, slot) {
           const result = await runStepsForCustomer(customer, platform, batch, steps, runId, pushItemEvent);
           const totalForCustomer = result.sentPhotos + result.sentMessages;
           state.totalSent += totalForCustomer;
-          remainingBudget -= totalForCustomer;
+          if (isNewToday && totalForCustomer > 0) remainingUserBudget--;
           if (result.noTarget) {
             pushEvent('⏭️', `${customer.name} (${platform}): ${platform === 'whatsapp' ? 'WhatsApp numarasi' : 'Telegram baglantisi'} yok, atlandi`);
           } else if (totalForCustomer > 0) {
@@ -288,6 +348,7 @@ async function executeRun(runId, slot) {
     pushEvent('❌', `Beklenmeyen hata: ${e.message}`);
   } finally {
     writeRunProgress(runId, state, true);
+    unregisterRun(runId);
   }
 
   const run = db.prepare('SELECT * FROM run_log WHERE id = ?').get(runId);
@@ -308,6 +369,7 @@ function runSlot(slotName, { manual = false } = {}) {
 
   const runInfo = db.prepare("INSERT INTO run_log (slot_name, kind, started_at) VALUES (?, 'slot', datetime('now'))").run(slotName);
   const runId = runInfo.lastInsertRowid;
+  registerRun(runId);
 
   const promise = executeRun(runId, slot).catch((e) => {
     console.error(`[campaign] ${slotName} calisirken beklenmeyen hata:`, e);
@@ -332,7 +394,12 @@ async function executeBroadcast(runId, { platform, text, customerIds }) {
   const platforms = platform === 'both' ? ['whatsapp', 'telegram'] : [platform];
 
   try {
+    broadcastPlatformLoop:
     for (const p of platforms) {
+      if (isCancelled(runId)) {
+        pushEvent('🛑', 'Calisma kullanici tarafindan iptal edildi.');
+        break;
+      }
       if (p === 'telegram' && telegram.getStatus().status !== 'connected') {
         pushEvent('⏭️', 'Telegram bagli degil, atlandi');
         continue;
@@ -343,9 +410,9 @@ async function executeBroadcast(runId, { platform, text, customerIds }) {
       }
 
       const cap = dailyCapFor(p);
-      let remainingBudget = cap - countSentToday(p);
-      if (remainingBudget <= 0) {
-        pushEvent('⏭️', `${p}: gunluk limit doldu, atlandi`);
+      let remainingUserBudget = cap - countDistinctCustomersToday(p);
+      if (remainingUserBudget <= 0) {
+        pushEvent('⏭️', `${p}: gunluk farkli musteri limiti doldu, atlandi`);
         continue;
       }
 
@@ -364,8 +431,13 @@ async function executeBroadcast(runId, { platform, text, customerIds }) {
       pushEvent('📋', `${p}: ${targets.length} musteriye mesaj gonderimi baslatiliyor`);
 
       for (const customer of targets) {
-        if (remainingBudget <= 0) {
-          pushEvent('⏭️', `${p}: gunluk limit doldu, kalan musteriler atlandi`);
+        if (isCancelled(runId)) {
+          pushEvent('🛑', 'Calisma kullanici tarafindan iptal edildi.');
+          break broadcastPlatformLoop;
+        }
+        const isNewToday = !wasCustomerContactedToday(customer.id, p);
+        if (isNewToday && remainingUserBudget <= 0) {
+          pushEvent('⏭️', `${p}: gunluk farkli musteri limiti doldu, kalan musteriler atlandi`);
           break;
         }
         pushEvent('📤', `${customer.name} (${p}): mesaj gonderiliyor...`);
@@ -379,7 +451,7 @@ async function executeBroadcast(runId, { platform, text, customerIds }) {
             db.prepare('INSERT INTO message_log (customer_id, platform, text, run_id) VALUES (?, ?, ?, ?)')
               .run(customer.id, p, text, runId);
             state.totalSent++;
-            remainingBudget--;
+            if (isNewToday) remainingUserBudget--;
             pushEvent('✅', `${customer.name} (${p}): mesaj gonderildi`);
           }
         } catch (e) {
@@ -396,6 +468,7 @@ async function executeBroadcast(runId, { platform, text, customerIds }) {
     pushEvent('❌', `Beklenmeyen hata: ${e.message}`);
   } finally {
     writeRunProgress(runId, state, true);
+    unregisterRun(runId);
   }
 
   const run = db.prepare('SELECT * FROM run_log WHERE id = ?').get(runId);
@@ -411,6 +484,7 @@ function runMessageBroadcast({ platform, text, customerIds }) {
 
   const runInfo = db.prepare("INSERT INTO run_log (slot_name, kind, started_at) VALUES (?, 'broadcast', datetime('now'))").run('broadcast');
   const runId = runInfo.lastInsertRowid;
+  registerRun(runId);
 
   const promise = executeBroadcast(runId, { platform, text: text.trim(), customerIds }).catch((e) => {
     console.error('[campaign] toplu mesaj calisirken beklenmeyen hata:', e);
@@ -441,5 +515,8 @@ module.exports = {
   getBatchProgress,
   isWarmupActive,
   countSentToday,
-  dailyCapFor
+  countDistinctCustomersToday,
+  dailyCapFor,
+  cancelRun,
+  isRunActive
 };

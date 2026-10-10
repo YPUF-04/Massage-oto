@@ -14,6 +14,8 @@ Musterilere WhatsApp ve Telegram uzerinden otomatik, rastgele fotograf ve mesaj 
 - **Platform bazli mesaj sablonlari**: WhatsApp ve Telegram icin ayri ayri, rastgele secilen indirim/bilgi metinleri.
 - **Onizleme (simulasyon)**: "Mesajlar" sekmesinde, gercek gonderim yapmadan WhatsApp ve Telegram baloncuk gorunumunde nasil gorunecegini gorursun.
 - **Canli izleme**: Her calisma ikonlu, zaman damgali, ilerleme cubuklu olarak aninda panelde goruntulenir (kac musteri islendi, hangi adimda, kim hata aldi).
+- **Iptal Et**: Devam eden bir calisma panelden tek tikla durdurulabilir; o anda islenmekte olan gonderim biter, kalan musteriler/fotograflar gonderilmez.
+- **Mobil uyumlu**: Panel telefon tarayicisindan da rahatca kullanilabilir (dar ekranda menu kaydirilabilir, tablolar yatay kayar, formlar tek sutuna dusler).
 - **Admin Telegram bildirimleri**: Bir calisma hata verince ve her calisma bitince, admin'in Telegram'ina otomatik rapor gider (kac gonderim, kac hata, ne kadar surdu).
 - **Ban riskini dusurme ayarlari**: gonderimler arasi rastgele gecikme, gunluk gonderim tavani, yeni WhatsApp numarasi icin "isinma modu" (ilk gunler daha az mesaj).
 - **Admin paneli**: Sifre korumali web paneli; WhatsApp QR baglama, musteri yonetimi, fotograf yukleme, zamanlama/adim sirasi ve mesaj sablonu ayarlari, gonderim gecmisi hepsi buradan.
@@ -92,7 +94,7 @@ Degisiklikler "Kaydet" butonuna basinca etkili olur, sunucuyu yeniden baslatmana
 "Ayarlar" sekmesinde:
 - **Blok ici gecikme**: ayni blok icindeki (orn. 20 fotoluk bir blok) gonderimler arasi kisa bekleme. Hizli gonderim icin kucuk tutulur (varsayilan 1-3 sn).
 - **Bloklar/musteriler arasi gecikme**: bir blok (foto grubu veya mesaj) bitince, siradaki bloga ya da siradaki musteriye gecmeden once uygulanan buyuk bekleme (varsayilan 20-90 sn). Ban riskini dusuren asil ayar budur, kucuk tutma.
-- WhatsApp / Telegram gunluk gonderim tavani (0 = limitsiz)
+- WhatsApp / Telegram icin ayri ayri **gunluk farkli musteri limiti** (orn. 30 = o gun en fazla 30 farkli musteriye ulasilir; ayni musteriye birden fazla foto/mesaj gitmesi bu sayiyi arttirmaz). 0 = limitsiz.
 - Isinma modu (yeni baglanan WhatsApp numarasi icin ilk N gun daha dusuk gunluk limit)
 - Admin bildirim icin Telegram chat id'si (botuna `/myid` yazarak kendi chat id'ni ogrenebilirsin)
 

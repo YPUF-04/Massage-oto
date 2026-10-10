@@ -10,11 +10,13 @@
 }
 
 * { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
+  overflow-x: hidden;
 }
 
 .screen { min-height: 100vh; }
@@ -35,13 +37,15 @@ body {
 .small { font-size: 13px; }
 
 input, select, button, textarea {
-  font-size: 15px;
+  font-size: 16px;
   padding: 10px 12px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: #0c1019;
   color: var(--text);
+  min-height: 40px;
 }
+textarea { min-height: auto; }
 button {
   background: var(--accent);
   border: none;
@@ -99,8 +103,9 @@ main { padding: 16px; max-width: 1100px; margin: 0 auto; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 12px; }
 .form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
 
-.table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.table th, .table td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); }
+.table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 14px; }
+.table th, .table td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 
 .list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .list li { display: flex; justify-content: space-between; gap: 8px; align-items: center; background: #0c1019; padding: 8px 10px; border-radius: 8px; }
@@ -174,6 +179,17 @@ main { padding: 16px; max-width: 1100px; margin: 0 auto; }
 .phone-preview .empty { color: var(--muted); font-size: 13px; }
 
 @media (max-width: 600px) {
-  .topbar { flex-direction: column; align-items: flex-start; }
+  .topbar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+  .tab-btn { flex-shrink: 0; }
+  #logout-btn { align-self: flex-end; }
   main { padding: 10px; }
+  .card { padding: 12px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-row { flex-direction: column; }
+  .form-row input, .form-row select, .form-row button { width: 100%; }
+  .btn-row { flex-direction: column; }
+  .btn-row button { width: 100%; }
+  .step-row .step-fields { width: 100%; }
+  .step-row .step-fields > * { flex: 1 1 auto; }
 }

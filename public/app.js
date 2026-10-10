@@ -133,12 +133,12 @@ async function loadDashboard() {
   const bp = s.batchProgress;
   progressBox.innerHTML = `
     <p class="muted small">Arsiv: ${s.activeBatch.label} - toplam ${bp.totalPhotos} fotograf</p>
-    <table class="table">
+    <div class="table-wrap"><table class="table">
       <thead><tr><th>Musteri</th><th>Gonderildi</th><th>Tamamlandi</th></tr></thead>
       <tbody>
         ${bp.customers.map((c) => `<tr><td>${c.customer.name}</td><td>${c.sent}/${c.total}</td><td>${c.completed ? 'Evet' : 'Hayir'}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Musteri yok</td></tr>'}
       </tbody>
-    </table>
+    </table></div>
   `;
 
   const runNowRow = document.getElementById('run-now-row');
@@ -167,6 +167,9 @@ async function loadDashboard() {
 
   const runs = await api.get('/api/runs');
   document.getElementById('run-log').innerHTML = runs.map(renderRunCard).join('') || '<p class="muted small">Henuz calisma yok</p>';
+  document.querySelectorAll('.run-cancel-btn').forEach((btn) => {
+    btn.addEventListener('click', () => cancelRun(btn.dataset.runId));
+  });
 }
 
 const KIND_LABELS = { slot: 'Fotograf Gonderimi', broadcast: 'Toplu Mesaj' };
@@ -190,7 +193,10 @@ function renderRunCard(r) {
           <strong>${escapeHtml(kindLabel)}</strong>
           <span class="muted small">(${escapeHtml(r.slot_name)}) - basladi: ${escapeHtml(r.started_at)}</span>
         </div>
-        ${inProgress ? '<span class="pill warn">devam ediyor</span>' : (r.error_count > 0 ? '<span class="pill bad">hatali bitti</span>' : '<span class="pill ok">bitti</span>')}
+        <div style="display:flex; gap:6px; align-items:center;">
+          ${inProgress ? '<span class="pill warn">devam ediyor</span>' : (r.error_count > 0 ? '<span class="pill bad">hatali bitti</span>' : '<span class="pill ok">bitti</span>')}
+          ${inProgress ? `<button class="danger run-cancel-btn" data-run-id="${r.id}">Iptal Et</button>` : ''}
+        </div>
       </div>
       ${total > 0 ? `
         <div class="progress-bar"><div style="width:${pct}%"></div></div>
@@ -200,6 +206,16 @@ function renderRunCard(r) {
       <div class="run-events">${eventsHtml}</div>
     </div>
   `;
+}
+
+async function cancelRun(runId) {
+  if (!confirm('Bu calisma iptal edilsin mi? Kalan gonderimler yapilmayacak.')) return;
+  try {
+    await api.post(`/api/runs/${runId}/cancel`);
+  } catch (e) {
+    alert('Hata: ' + e.message);
+  }
+  loadDashboard();
 }
 
 function escapeHtml(str) {
@@ -619,8 +635,8 @@ const SETTINGS_FIELDS = [
   { key: 'intra_step_delay_max_sec', label: 'Blok ici max gecikme (sn)', type: 'number' },
   { key: 'delay_min_sec', label: 'Bloklar/musteriler arasi min gecikme (sn) - anti-ban icin asil onemli olan budur', type: 'number' },
   { key: 'delay_max_sec', label: 'Bloklar/musteriler arasi max gecikme (sn)', type: 'number' },
-  { key: 'daily_send_cap_whatsapp', label: 'WhatsApp gunluk limit (0 = limitsiz)', type: 'number' },
-  { key: 'daily_send_cap_telegram', label: 'Telegram gunluk limit (0 = limitsiz)', type: 'number' },
+  { key: 'daily_send_cap_whatsapp', label: 'WhatsApp gunluk farkli musteri limiti (orn. 30 = gunde en fazla 30 FARKLI musteriye gonderim, 0 = limitsiz)', type: 'number' },
+  { key: 'daily_send_cap_telegram', label: 'Telegram gunluk farkli musteri limiti (0 = limitsiz)', type: 'number' },
   { key: 'warmup_enabled', label: 'Isinma modu aktif (true/false)', type: 'text' },
   { key: 'warmup_days', label: 'Isinma suresi (gun)', type: 'number' },
   { key: 'warmup_max_per_day', label: 'Isinmada gunluk max WhatsApp', type: 'number' },
