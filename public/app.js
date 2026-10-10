@@ -113,13 +113,13 @@ async function loadDashboard() {
 
   const waBox = document.getElementById('wa-status');
   const waPill = s.whatsapp.status === 'connected' ? 'ok' : s.whatsapp.status === 'qr' ? 'warn' : 'bad';
-  waBox.innerHTML = `<span class="pill ${waPill}">${s.whatsapp.status}</span> ${s.whatsapp.lastError ? '<span class="muted small">' + s.whatsapp.lastError + '</span>' : ''}`;
+  waBox.innerHTML = `${statusPill(waPill, s.whatsapp.status)} ${s.whatsapp.lastError && s.whatsapp.status !== 'connected' ? '<div class="muted small err-line">' + escapeHtml(s.whatsapp.lastError) + '</div>' : ''}`;
   const qrWrap = document.getElementById('wa-qr-wrap');
   qrWrap.innerHTML = s.whatsapp.qrDataUrl ? `<img src="${s.whatsapp.qrDataUrl}" alt="QR" /><p class="muted small">Telefonunda WhatsApp > Baglı Cihazlar > Cihaz Baglama ile bu kodu okut.</p>` : '';
 
   const tgBox = document.getElementById('tg-status');
   const tgPill = s.telegram.status === 'connected' ? 'ok' : 'bad';
-  tgBox.innerHTML = `<span class="pill ${tgPill}">${s.telegram.status}</span> ${s.telegram.lastError ? '<span class="muted small">' + s.telegram.lastError + '</span>' : ''}`;
+  tgBox.innerHTML = `${statusPill(tgPill, s.telegram.status)} ${s.telegram.lastError && s.telegram.status !== 'connected' ? '<div class="muted small err-line">' + escapeHtml(s.telegram.lastError) + '</div>' : ''}`;
 
   const todayBox = document.getElementById('today-stats');
   const capText = (v) => (v === null ? '∞' : v);
@@ -223,6 +223,11 @@ async function cancelRun(runId) {
     alert('Hata: ' + e.message);
   }
   loadDashboard();
+}
+
+const STATUS_LABELS = { connected: 'Bagli', qr: 'QR bekleniyor', connecting: 'Baglaniyor', disconnected: 'Bagli degil', disabled: 'Kapali' };
+function statusPill(tone, status) {
+  return `<span class="pill ${tone} pill-dot">${STATUS_LABELS[status] || escapeHtml(status)}</span>`;
 }
 
 function renderMiniBar(sent, total) {
