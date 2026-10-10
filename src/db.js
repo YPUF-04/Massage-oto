@@ -150,8 +150,8 @@ function seedDefaults() {
   const defaultSettings = {
     delay_min_sec: '5',
     delay_max_sec: '15',
-    intra_step_delay_min_sec: '1',
-    intra_step_delay_max_sec: '3',
+    intra_step_delay_min_sec: '0.5',
+    intra_step_delay_max_sec: '1',
     warmup_enabled: 'true',
     warmup_days: '3',
     warmup_max_per_day: '10',

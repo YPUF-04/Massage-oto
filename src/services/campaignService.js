@@ -56,8 +56,8 @@ function randomStepDelayMs() {
 // degil, platformun ani (burst) istek sinirina takilmamak. Hizli gonderim
 // istendigi icin kucuk tutulur.
 function randomIntraStepDelayMs() {
-  const min = parseInt(settingsService.get('intra_step_delay_min_sec', '1'), 10);
-  const max = parseInt(settingsService.get('intra_step_delay_max_sec', '3'), 10);
+  const min = parseFloat(settingsService.get('intra_step_delay_min_sec', '0.5')) || 0;
+  const max = parseFloat(settingsService.get('intra_step_delay_max_sec', '1')) || 0;
   const lo = Math.min(min, max);
   const hi = Math.max(min, max);
   const seconds = lo + Math.random() * (hi - lo);

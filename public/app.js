@@ -635,8 +635,8 @@ async function sendBroadcast() {
 
 // ---------- Settings ----------
 const SETTINGS_FIELDS = [
-  { key: 'intra_step_delay_min_sec', label: 'Blok ici min gecikme (sn) - orn. 20 fotoluk blokta foto arasi', type: 'number' },
-  { key: 'intra_step_delay_max_sec', label: 'Blok ici max gecikme (sn)', type: 'number' },
+  { key: 'intra_step_delay_min_sec', label: 'Blok ici min gecikme (sn, ondalik olabilir, orn. 0.5) - 20 fotoluk blokta foto arasi. Bunu hizlandirmak gorece guvenli.', type: 'number', step: '0.1' },
+  { key: 'intra_step_delay_max_sec', label: 'Blok ici max gecikme (sn, ondalik olabilir)', type: 'number', step: '0.1' },
   { key: 'delay_min_sec', label: 'Bloklar/musteriler arasi min gecikme (sn) - anti-ban icin asil onemli olan budur', type: 'number' },
   { key: 'delay_max_sec', label: 'Bloklar/musteriler arasi max gecikme (sn)', type: 'number' },
   { key: 'daily_send_cap_whatsapp', label: 'WhatsApp gunluk farkli musteri limiti (orn. 30 = gunde en fazla 30 FARKLI musteriye gonderim, 0 = limitsiz)', type: 'number' },
@@ -654,7 +654,7 @@ async function loadSettings() {
   const form = document.getElementById('settings-form');
   form.innerHTML = SETTINGS_FIELDS.map((f) => `
     <label>${f.label}
-      <input type="${f.type}" data-key="${f.key}" value="${settings[f.key] ?? ''}" />
+      <input type="${f.type}" ${f.step ? `step="${f.step}"` : ''} data-key="${f.key}" value="${settings[f.key] ?? ''}" />
     </label>
   `).join('');
 }
