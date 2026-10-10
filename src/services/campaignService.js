@@ -135,13 +135,22 @@ function isCustomerCompleted(batchId, customerId) {
   return !!(row && row.completed_at);
 }
 
+// "Dalga" (wave) mantigi: once BASLANMIS ama henuz BITMEMIS musterileri
+// (bu artista en az 1 foto almis ama hala eksigi olan) devam ettirir, en
+// son gonderilenden en eskiye dogru siralar. Hic baslanmamis musteriler
+// en sona konur. Boylece slotun "musteri sayisi" kadar musteriden olusan
+// sabit bir grup, hepsi tamamlanana kadar calisilir; yeni musteriler
+// ancak gruptan biri tamamlayip ayrilinca (eligible listesinden dusunce)
+// devreye girer.
 function orderCustomersByLeastRecentlySent(customers, batchId) {
   const withStats = customers.map((c) => {
     const row = db.prepare('SELECT MAX(sent_at) AS last_sent, COUNT(*) AS cnt FROM sent_log WHERE customer_id = ? AND batch_id = ?').get(c.id, batchId);
     return { customer: c, lastSent: row.last_sent || '', cnt: row.cnt || 0 };
   });
   withStats.sort((a, b) => {
-    if (a.cnt !== b.cnt) return a.cnt - b.cnt;
+    const aStarted = a.cnt > 0 ? 0 : 1;
+    const bStarted = b.cnt > 0 ? 0 : 1;
+    if (aStarted !== bStarted) return aStarted - bStarted;
     return a.lastSent < b.lastSent ? -1 : a.lastSent > b.lastSent ? 1 : 0;
   });
   return withStats.map((w) => w.customer);

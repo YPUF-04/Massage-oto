@@ -46,48 +46,59 @@ Tarayicida `http://localhost:3000` adresini ac, `.env` icindeki ADMIN_USERNAME/A
 3. Sana verilen token'i `.env` dosyasindaki `TELEGRAM_BOT_TOKEN` degerine yapistir.
 4. Musterilerin bu botu bulup `/start <baglama-kodu>` yazmasi gerekir. Baglama kodu, panelin "Musteriler" sekmesinde her musterinin yaninda gorunur (ornek: `/start a1b2c3d4`). Musteri bunu yazinca sistemi otomatik olarak o musterinin Telegram sohbet kimligini kaydeder.
 
+## Panel Menusu
+
+- **Anasayfa**: WhatsApp/Telegram baglanti durumu, bugun ulasilan musteri sayisi, aktif arsiv ilerlemesi, "simdi calistir" butonlari, canli calisma loglari (ve devam eden bir calismayi "Iptal Et" ile durdurma).
+- **Otomasyon**: fotograf yukleme + kategoriler + arsivler, ve altinda zaman dilimi (sabah/ogle/aksam) + adim sirasi ayarlari. Otomasyonla ilgili her sey burada.
+- **Musteriler**: iki ayri "Ekle" karti - biri WhatsApp numarasiyla, digeri Telegram ile musteri eklemek icin - ve musteri listesi.
+- **Mesajlar**: WhatsApp/Telegram mesaj sablonlari, onizleme (simulasyon) ve Toplu Mesaj (fotografsiz, anlik gonderim).
+- **Ayarlar**: gecikmeler, gunluk limitler, isinma modu, admin Telegram bildirimi gibi tum degistirilebilir ayarlar tek yerde.
+
 ## WhatsApp Baglama
 
-1. Panelde "Panel" (Dashboard) sekmesinde "Baglan / QR goster" butonuna tikla.
+1. Panelde "Anasayfa" sekmesinde "Baglan / QR goster" butonuna tikla.
 2. Cikan QR kodu telefonundaki WhatsApp > Ayarlar > Baglı Cihazlar > Cihaz Baglama ile okut.
 3. Baglanti kurulunca durum "connected" olarak gorunur ve oturum `storage/data/baileys_auth/` icinde saklanir (yeniden baslatmada tekrar QR okutmana gerek kalmaz).
 
 ## Musteri Ekleme
 
-Panelin "Musteriler" sekmesinden isim, WhatsApp numarasi (ulke kodu ile, orn. `905551112233`) ve/veya Telegram baglama bilgisi ile ekleyebilirsin. Platform olarak WhatsApp, Telegram veya "her ikisi" secilebilir.
+"Musteriler" sekmesinde iki ayri kart var:
+- **WhatsApp'tan Ekle**: isim + WhatsApp numarasi (ulke kodu ile, orn. `905551112233`).
+- **Telegram'dan Ekle**: sadece isim. Eklendikten sonra listede bir baglama kodu gorursun; musterinin Telegram botuna `/start <kod>` yazmasi gerekir.
+
+Bir musteriyi her iki platformdan da gonderim alacak sekilde ayarlamak istersen, musteri listesindeki "Platform" sutunundan "Her ikisi" secebilirsin.
 
 ## Fotograf Yukleme ve Arsiv Mantigi
 
-- "Fotograflar" sekmesinden istedigin kadar fotografi aktif havuza yukle (orn. 500 fotograf). Yuklerken istersen kategori etiketi de yazabilirsin (orn. "Pantolon, Sweat, Ceket") - bir fotograf birden fazla kategoride olabilir.
-- Zamanlama adimlarinda (asagida) bir foto blogu icin "hangi kategori(ler)den gonderilsin" secebilirsin; sececegin kategorideki fotograflardan rastgele secilir. Kategori secmezsen tum fotograflardan secilir.
-- Sistem her zamanlama caliştiginda, o slotun ayarlarina gore rastgele ve o musteriye daha once gonderilmemis fotograflari secer ve gonderir (kategori farketmeksizin, bir musteriye ayni foto iki kez gitmez).
+- "Otomasyon" sekmesinden istedigin kadar fotografi aktif havuza yukle (orn. 500 fotograf). Yuklerken istersen kategori etiketi de yazabilirsin (orn. "Pantolon, Sweat, Ceket") - bir fotograf birden fazla kategoride olabilir.
+- Adim sirasinda (asagida) bir foto blogu icin "hangi kategori(ler)den gonderilsin" secebilirsin; sececegin kategorideki fotograflardan rastgele secilir. Kategori secmezsen tum fotograflardan secilir.
+- Sistem her calistiginda, o slotun ayarlarina gore rastgele ve o musteriye daha once gonderilmemis fotograflari secer ve gonderir (kategori farketmeksizin, bir musteriye ayni foto iki kez gitmez).
 - Bir musteri havuzdaki tum fotograflari aldiginda o musteri icin "tamamlandi" isaretlenir.
 - **Tum aktif musteriler** havuzdaki tum fotograflari aldiginda, havuz otomatik olarak `storage/uploads/archive/batch-<id>/` klasorune tasinir ve arsivlenmis olarak isaretlenir; yeni, bos bir aktif havuz olusur. Bu noktada yeni fotograflarini yukleyebilirsin.
-- Panelin "Panel" sekmesinde aktif havuzun ilerlemesini (hangi musteriye kac fotograf gitti) canli olarak gorebilirsin.
+- "Anasayfa" sekmesinde aktif havuzun ilerlemesini (hangi musteriye kac fotograf gitti) canli olarak gorebilirsin.
 
-## Zamanlama Ayarlari
+## Zamanlama ve "Dalga" Mantigi
 
-"Zamanlama" sekmesinde sabah/ogle/aksam slotlari icin:
+"Otomasyon" sekmesinde sabah/ogle/aksam slotlari icin:
 - Acik/kapali
 - Saat (24 saat formati, `HH:MM`)
-- Bu slotta kac musteriye gonderim yapilacagi
+- **Musteri sayisi**: o slotun calistigi "dalga" buyuklugu (orn. 30). Sistem her calismada ONCE bu dalgadaki musterilerden halen eksigi olanlari devam ettirir (yeni musteriye gecmez); bir musteri havuzdaki tum fotograflari aldiginda dalgadan "tamamlandi" olarak cikar ve o bosluga otomatik olarak yeni bir musteri girer. Yani once secili 30 kisiye hepsi bitene kadar gonderim yapilir, sonra siradaki 30 kisiye gecilir.
 - WhatsApp/Telegram'dan hangisinin aktif olacagi (orn. "bugun sadece Telegram'dan gonder" icin WhatsApp'i o slotta kapatabilirsin)
 
 Her slotun altinda bir **adim sirasi (step)** editoru var. Burada "Fotograf Blogu" veya "Mesaj Blogu" ekleyip siralayabilirsin:
-- **Fotograf Blogu**: kac fotograf gonderilecegini yazarsin (orn. 20).
+- **Fotograf Blogu**: kac fotograf gonderilecegini (ve istersen hangi kategori(ler)den) yazarsin (orn. 20).
 - **Mesaj Blogu**: rastgele bir mesaj sablonundan mi secilecek, yoksa senin yazdigin sabit bir metin mi gonderilecek, onu secersin.
 
 Ornek: "20 foto -> indirim mesaji -> 20 foto daha -> yeni koleksiyon mesaji" yapmak icin sirayla 4 adim eklersin: Fotograf(20) -> Mesaj(ozel: "Indirim var!") -> Fotograf(20) -> Mesaj(ozel: "Yeni koleksiyon!"). Bu sira, o slotta secilen HER musteri icin yukaridan asagiya calisir. Adimlari ok butonlariyla yukari/asagi tasiyabilir, "Sil" ile kaldirabilirsin.
 
-Degisiklikler "Kaydet" butonuna basinca etkili olur, sunucuyu yeniden baslatmana gerek yok. "Panel" sekmesinden istedigin slotu elle de "simdi calistir" ile tetikleyebilirsin.
+Degisiklikler "Kaydet" butonuna basinca etkili olur, sunucuyu yeniden baslatmana gerek yok. "Anasayfa" sekmesinden istedigin slotu elle de "simdi calistir" ile tetikleyebilir, devam eden bir calismayi "Iptal Et" ile durdurabilirsin.
 
-## Toplu Mesaj
+## Mesajlar ve Toplu Mesaj
 
-"Toplu Mesaj" sekmesinden, zamanlamadan bagimsiz olarak istedigin an secilen musterilere (veya hicbirini secmezsen platforma uygun tum aktif musterilere) sadece metin mesaji gonderebilirsin. Fotograf gonderimiyle ayni gecikme ve gunluk limit ayarlarina uyar, "Panel" sekmesinde ayni canli gorunumle takip edilir.
-
-## Mesaj Sablonlari
-
-"Mesajlar" sekmesinde WhatsApp ve Telegram icin ayri ayri metin listeleri olusturabilirsin (orn. indirim duyurulari). Bu sablonlar, adim sirasinda "rastgele sablondan sec" secilen mesaj bloklarinda kullanilir. Her metni ayri ayri aktif/pasif yapabilir veya silebilirsin. Ayni sekmenin altinda, gercek gonderim yapmadan WhatsApp ve Telegram'da nasil gorunecegini gosteren bir **onizleme** bulunur.
+"Mesajlar" sekmesinde:
+- WhatsApp ve Telegram icin ayri ayri metin listeleri olusturabilirsin (orn. indirim duyurulari). Bu sablonlar, adim sirasinda "rastgele sablondan sec" secilen mesaj bloklarinda kullanilir. Her metni ayri ayri aktif/pasif yapabilir veya silebilirsin.
+- Gercek gonderim yapmadan WhatsApp ve Telegram'da nasil gorunecegini gosteren bir **onizleme** bulunur.
+- **Toplu Mesaj**: zamanlamadan bagimsiz olarak istedigin an secilen musterilere (veya "Tum Musteriler" isaretleyerek platforma uygun tum aktif musterilere) sadece metin mesaji gonderebilirsin. Fotograf gonderimiyle ayni gecikme ve gunluk limit ayarlarina uyar, "Anasayfa" sekmesinde ayni canli gorunumle takip edilir.
 
 ## Ayarlar
 

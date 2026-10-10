@@ -23,12 +23,10 @@
   <header class="topbar">
     <div class="brand">Massage Oto</div>
     <nav id="tabs" class="tabs">
-      <button data-tab="dashboard" class="tab-btn active">Panel</button>
-      <button data-tab="photos" class="tab-btn">Fotograflar</button>
-      <button data-tab="customers" class="tab-btn">Musteriler</button>
+      <button data-tab="dashboard" class="tab-btn active">Anasayfa</button>
       <button data-tab="schedule" class="tab-btn">Otomasyon</button>
+      <button data-tab="customers" class="tab-btn">Musteriler</button>
       <button data-tab="captions" class="tab-btn">Mesajlar</button>
-      <button data-tab="broadcast" class="tab-btn">Toplu Mesaj</button>
       <button data-tab="settings" class="tab-btn">Ayarlar</button>
     </nav>
     <button id="logout-btn" class="ghost">Cikis</button>
@@ -74,9 +72,41 @@
       </div>
     </section>
 
-    <section id="tab-photos" class="tab-panel" style="display:none;">
+    <section id="tab-customers" class="tab-panel" style="display:none;">
+      <h2 style="margin-top:0;">Musteriler</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>📱 WhatsApp'tan Ekle</h3>
+          <div class="form-row" style="flex-direction:column;">
+            <input id="cust-wa-name" placeholder="Isim" />
+            <input id="cust-wa-number" placeholder="WhatsApp no (905551112233)" />
+            <button id="cust-wa-add-btn">WhatsApp Musterisi Ekle</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>✈️ Telegram'dan Ekle</h3>
+          <div class="form-row" style="flex-direction:column;">
+            <input id="cust-tg-name" placeholder="Isim" />
+            <button id="cust-tg-add-btn">Telegram Musterisi Ekle</button>
+          </div>
+          <p class="muted small">Eklendikten sonra listede musterinin yaninda bir baglama kodu gorursun. Musterinin Telegram botuna <code>/start &lt;kod&gt;</code> yazmasi gerekir.</p>
+        </div>
+      </div>
       <div class="card">
-        <h3>Fotograf Yukle (Aktif Arsive Eklenir)</h3>
+        <h3>Musteri Listesi</h3>
+        <div class="table-wrap"><table class="table" id="customers-table">
+          <thead><tr><th>Isim</th><th>WhatsApp</th><th>Telegram</th><th>Platform</th><th>Aktif</th><th>Telegram baglama kodu</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <section id="tab-schedule" class="tab-panel" style="display:none;">
+      <h2 style="margin-top:0;">Otomasyon</h2>
+      <p class="muted small">Once fotograflarini yukle (istersen kategori etiketiyle), sonra her zaman dilimi (sabah/ogle/aksam) icin saat, musteri sayisi ve gonderim sirasini (foto blogu / mesaj blogu) kur.</p>
+
+      <div class="card">
+        <h3>1. Fotograf Yukle</h3>
         <input id="photo-input" type="file" multiple accept="image/*" />
         <input id="photo-categories" type="text" placeholder="Kategoriler (virgulle ayir, orn: Pantolon, Sweat, Ceket)" style="width:100%; margin-top:8px;" />
         <p class="muted small">Yazdigin kategoriler yoksa otomatik olusturulur. Bos birakirsan fotograflar kategorisiz yuklenir (her adimda secilebilir).</p>
@@ -94,39 +124,13 @@
           <tbody></tbody>
         </table></div>
       </div>
-    </section>
 
-    <section id="tab-customers" class="tab-panel" style="display:none;">
-      <div class="card">
-        <h3>Yeni Musteri Ekle</h3>
-        <div class="form-row">
-          <input id="cust-name" placeholder="Isim" />
-          <input id="cust-whatsapp" placeholder="WhatsApp no (905551112233)" />
-          <input id="cust-telegram" placeholder="Telegram chat id (opsiyonel)" />
-          <select id="cust-platform">
-            <option value="whatsapp">WhatsApp</option>
-            <option value="telegram">Telegram</option>
-            <option value="both">Her ikisi</option>
-          </select>
-          <button id="cust-add-btn">Ekle</button>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Musteri Listesi</h3>
-        <div class="table-wrap"><table class="table" id="customers-table">
-          <thead><tr><th>Isim</th><th>WhatsApp</th><th>Telegram</th><th>Platform</th><th>Aktif</th><th>Telegram baglama kodu</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table></div>
-      </div>
-    </section>
-
-    <section id="tab-schedule" class="tab-panel" style="display:none;">
-      <h2 style="margin-top:0;">Otomasyon Ayarlari</h2>
-      <p class="muted small">Her zaman dilimi (sabah/ogle/aksam) icin saat, musteri sayisi ve gonderim sirasini (foto blogu / mesaj blogu) burada kurarsin.</p>
+      <h3 style="margin-top:24px;">2. Zamanlama ve Gonderim Sirasi</h3>
       <div class="card" id="slots-card"></div>
     </section>
 
     <section id="tab-captions" class="tab-panel" style="display:none;">
+      <h2 style="margin-top:0;">Mesajlar</h2>
       <div class="grid">
         <div class="card">
           <h3>WhatsApp Mesajlari</h3>
@@ -160,9 +164,7 @@
           </div>
         </div>
       </div>
-    </section>
 
-    <section id="tab-broadcast" class="tab-panel" style="display:none;">
       <div class="card">
         <h3>Toplu Mesaj Gonder (Fotografsiz)</h3>
         <p class="muted small">Zamanlamadan bagimsiz, istedigin an secilen musterilere sadece metin mesaji gonderir. Ayni gecikme ve gunluk limit ayarlarina uyar.</p>

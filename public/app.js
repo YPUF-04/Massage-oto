@@ -77,7 +77,8 @@ function initApp() {
 
   document.getElementById('photo-upload-btn').addEventListener('click', uploadPhotos);
 
-  document.getElementById('cust-add-btn').addEventListener('click', addCustomer);
+  document.getElementById('cust-wa-add-btn').addEventListener('click', () => addCustomer('whatsapp'));
+  document.getElementById('cust-tg-add-btn').addEventListener('click', () => addCustomer('telegram'));
 
   document.getElementById('cap-wa-add').addEventListener('click', () => addCaption('whatsapp'));
   document.getElementById('cap-tg-add').addEventListener('click', () => addCaption('telegram'));
@@ -100,11 +101,9 @@ function switchTab(tab) {
 
 function refreshCurrentTab() {
   if (currentTab === 'dashboard') loadDashboard();
-  if (currentTab === 'photos') loadPhotos();
   if (currentTab === 'customers') loadCustomers();
-  if (currentTab === 'schedule') loadSchedule();
-  if (currentTab === 'captions') loadCaptions();
-  if (currentTab === 'broadcast') loadBroadcastTab();
+  if (currentTab === 'schedule') { loadPhotos(); loadSchedule(); }
+  if (currentTab === 'captions') { loadCaptions(); loadBroadcastTab(); }
   if (currentTab === 'settings') loadSettings();
 }
 
@@ -323,16 +322,21 @@ async function loadCustomers() {
   });
 }
 
-async function addCustomer() {
-  const name = document.getElementById('cust-name').value.trim();
-  const whatsapp_number = document.getElementById('cust-whatsapp').value.trim();
-  const telegram_chat_id = document.getElementById('cust-telegram').value.trim();
-  const platform = document.getElementById('cust-platform').value;
-  if (!name) { alert('Isim gerekli'); return; }
-  await api.post('/api/customers', { name, whatsapp_number, telegram_chat_id, platform });
-  document.getElementById('cust-name').value = '';
-  document.getElementById('cust-whatsapp').value = '';
-  document.getElementById('cust-telegram').value = '';
+async function addCustomer(platform) {
+  if (platform === 'whatsapp') {
+    const name = document.getElementById('cust-wa-name').value.trim();
+    const whatsapp_number = document.getElementById('cust-wa-number').value.trim();
+    if (!name) { alert('Isim gerekli'); return; }
+    if (!whatsapp_number) { alert('WhatsApp numarasi gerekli'); return; }
+    await api.post('/api/customers', { name, whatsapp_number, platform: 'whatsapp' });
+    document.getElementById('cust-wa-name').value = '';
+    document.getElementById('cust-wa-number').value = '';
+  } else {
+    const name = document.getElementById('cust-tg-name').value.trim();
+    if (!name) { alert('Isim gerekli'); return; }
+    await api.post('/api/customers', { name, platform: 'telegram' });
+    document.getElementById('cust-tg-name').value = '';
+  }
   loadCustomers();
 }
 
