@@ -201,7 +201,7 @@ async function runStepsForCustomer(customer, platform, batch, steps, runId, push
               .run(customer.id, photo.id, batch.id, platform);
             sentPhotos++;
           }
-          pushItemEvent('🖼️', `${customer.name} (${platform}): ${chunk.length} foto grup halinde gonderildi (${sentPhotos}/${photos.length})`);
+          pushItemEvent('🖼️', `${customer.name} (${platform}): ${chunk.length} foto grup halinde gönderildi (${sentPhotos}/${photos.length})`);
           if (c < chunks.length - 1) await sleep(randomIntraStepDelayMs());
         }
       } else {
@@ -214,7 +214,7 @@ async function runStepsForCustomer(customer, platform, batch, steps, runId, push
           db.prepare('INSERT INTO sent_log (customer_id, photo_id, batch_id, platform) VALUES (?, ?, ?, ?)')
             .run(customer.id, photo.id, batch.id, platform);
           sentPhotos++;
-          pushItemEvent('🖼️', `${customer.name} (${platform}): foto gonderildi (${i + 1}/${photos.length})`);
+          pushItemEvent('🖼️', `${customer.name} (${platform}): foto gönderildi (${i + 1}/${photos.length})`);
           // Blok icinde hizli gonderim: fotograflar arasinda sadece kisa bir bekleme var.
           if (i < photos.length - 1) await sleep(randomIntraStepDelayMs());
         }
@@ -226,7 +226,7 @@ async function runStepsForCustomer(customer, platform, batch, steps, runId, push
         ? step.message_text
         : (settingsService.randomActiveCaption(platform) || {}).text;
       if (!text) {
-        pushItemEvent('⏭️', `${customer.name} (${platform}): mesaj adimi atlandi (metin yok)`);
+        pushItemEvent('⏭️', `${customer.name} (${platform}): mesaj adımı atlandı (metin yok)`);
         continue;
       }
       if (platform === 'whatsapp') await whatsapp.sendText(target, text);
@@ -235,7 +235,7 @@ async function runStepsForCustomer(customer, platform, batch, steps, runId, push
       db.prepare('INSERT INTO message_log (customer_id, platform, text, run_id) VALUES (?, ?, ?, ?)')
         .run(customer.id, platform, text, runId);
       sentMessages++;
-      pushItemEvent('💬', `${customer.name} (${platform}): mesaj gonderildi - "${text.slice(0, 40)}${text.length > 40 ? '...' : ''}"`);
+      pushItemEvent('💬', `${customer.name} (${platform}): mesaj gönderildi - "${text.slice(0, 40)}${text.length > 40 ? '...' : ''}"`);
       await sleep(randomStepDelayMs());
     }
   }
@@ -299,7 +299,7 @@ async function executeRun(runId, slot) {
   const platforms = slot.platforms.split(',').map((p) => p.trim()).filter(Boolean);
   const steps = settingsService.getSlotSteps(slot.name);
   if (!steps.length) {
-    pushEvent('❌', 'Bu slot icin adim sirasi tanimli degil, "Zamanlama" ayarindan en az bir adim ekle.');
+    pushEvent('❌', 'Bu slot için adım sırası tanımlı değil, "Zamanlama" ayarindan en az bir adım ekle.');
     writeRunProgress(runId, state, true);
     return { sent: 0, errors: 1, details: state.events };
   }
@@ -308,20 +308,20 @@ async function executeRun(runId, slot) {
     platformLoop:
     for (const platform of platforms) {
       if (isCancelled(runId)) {
-        pushEvent('🛑', 'Calisma kullanici tarafindan iptal edildi.');
+        pushEvent('🛑', 'Çalışma kullanıcı tarafından iptal edildi.');
         break;
       }
       if (platform === 'telegram') {
         const tgStatus = telegram.getStatus();
         if (tgStatus.status !== 'connected') {
-          pushEvent('⏭️', 'Telegram bagli degil, atlandi');
+          pushEvent('⏭️', 'Telegram bağlı değil, atlandı');
           continue;
         }
       }
       if (platform === 'whatsapp') {
         const waStatus = whatsapp.getStatus();
         if (waStatus.status !== 'connected') {
-          pushEvent('⏭️', 'WhatsApp bagli degil, atlandi');
+          pushEvent('⏭️', 'WhatsApp bağlı değil, atlandı');
           continue;
         }
       }
@@ -329,7 +329,7 @@ async function executeRun(runId, slot) {
       const cap = dailyCapFor(platform);
       let remainingUserBudget = cap - countDistinctCustomersToday(platform);
       if (remainingUserBudget <= 0) {
-        pushEvent('⏭️', `${platform}: gunluk farkli musteri limiti doldu, atlandi`);
+        pushEvent('⏭️', `${platform}: günlük farklı müşteri limiti doldu, atlandı`);
         continue;
       }
 
@@ -343,7 +343,7 @@ async function executeRun(runId, slot) {
         eligible = eligible.filter((c) =>
           photoService.pickUnsentPhotosForCustomer(batch.id, c.id, 1, stepCategoryIds).length > 0);
         if (!eligible.length) {
-          pushEvent('⏭️', `${platform}: secilen kategorilerde gonderilmemis fotosu kalan musteri yok`);
+          pushEvent('⏭️', `${platform}: seçilen kategorilerde gönderilmemis fotosu kalan müşteri yok`);
           continue;
         }
       }
@@ -351,35 +351,35 @@ async function executeRun(runId, slot) {
       eligible = eligible.slice(0, slot.customer_count);
 
       if (!eligible.length) {
-        pushEvent('⏭️', `${platform}: gonderilecek musteri yok`);
+        pushEvent('⏭️', `${platform}: gönderilecek müşteri yok`);
         continue;
       }
 
       state.totalTargets += eligible.length;
-      pushEvent('📋', `${platform}: ${eligible.length} musteriye gonderim baslatiliyor`);
+      pushEvent('📋', `${platform}: ${eligible.length} müşteriye gönderim başlatılıyor`);
 
       for (const customer of eligible) {
         if (isCancelled(runId)) {
-          pushEvent('🛑', 'Calisma kullanici tarafindan iptal edildi.');
+          pushEvent('🛑', 'Çalışma kullanıcı tarafından iptal edildi.');
           break platformLoop;
         }
         const isNewToday = !wasCustomerContactedToday(customer.id, platform);
         if (isNewToday && remainingUserBudget <= 0) {
-          pushEvent('⏭️', `${platform}: gunluk farkli musteri limiti doldu, kalan musteriler atlandi`);
+          pushEvent('⏭️', `${platform}: günlük farklı müşteri limiti doldu, kalan müşteriler atlandı`);
           break;
         }
-        pushEvent('▶️', `${customer.name} (${platform}): adim sirasi basladi (${steps.length} adim)`);
+        pushEvent('▶️', `${customer.name} (${platform}): adım sırası başladı (${steps.length} adım)`);
         try {
           const result = await runStepsForCustomer(customer, platform, batch, steps, runId, pushItemEvent);
           const totalForCustomer = result.sentPhotos + result.sentMessages;
           state.totalSent += totalForCustomer;
           if (isNewToday && totalForCustomer > 0) remainingUserBudget--;
           if (result.noTarget) {
-            pushEvent('⏭️', `${customer.name} (${platform}): ${platform === 'whatsapp' ? 'WhatsApp numarasi' : 'Telegram baglantisi'} yok, atlandi`);
+            pushEvent('⏭️', `${customer.name} (${platform}): ${platform === 'whatsapp' ? 'WhatsApp numarası' : 'Telegram bağlantısı'} yok, atlandı`);
           } else if (totalForCustomer > 0) {
-            pushEvent('✅', `${customer.name} (${platform}): ${result.sentPhotos} foto, ${result.sentMessages} mesaj gonderildi`);
+            pushEvent('✅', `${customer.name} (${platform}): ${result.sentPhotos} foto, ${result.sentMessages} mesaj gönderildi`);
           } else if (result.skipped) {
-            pushEvent('⏭️', `${customer.name} (${platform}): gonderilecek yeni foto yok, atlandi`);
+            pushEvent('⏭️', `${customer.name} (${platform}): gönderilecek yeni foto yok, atlandı`);
           }
         } catch (e) {
           state.errorCount++;
@@ -391,7 +391,7 @@ async function executeRun(runId, slot) {
     }
 
     const archived = checkAndArchiveIfComplete(batch);
-    if (archived) pushEvent('📦', 'Arsiv tamamlandi ve otomatik olarak arsivlendi.');
+    if (archived) pushEvent('📦', 'Arşiv tamamlandı ve otomatik olarak arşivlendi.');
   } catch (e) {
     state.errorCount++;
     pushEvent('❌', `Beklenmeyen hata: ${e.message}`);
@@ -411,7 +411,7 @@ async function executeRun(runId, slot) {
 // run_log satiri her adimda guncellenir, panel bunu dakikasi dakikasina gosterir.
 function runSlot(slotName, { manual = false } = {}) {
   const slot = db.prepare('SELECT * FROM slots WHERE name = ?').get(slotName);
-  if (!slot) throw new Error(`Slot bulunamadi: ${slotName}`);
+  if (!slot) throw new Error(`Slot bulunamadı: ${slotName}`);
   if (!slot.enabled && !manual) {
     return { skipped: true, reason: 'slot devre disi' };
   }
@@ -421,7 +421,7 @@ function runSlot(slotName, { manual = false } = {}) {
   registerRun(runId);
 
   const promise = executeRun(runId, slot).catch((e) => {
-    console.error(`[campaign] ${slotName} calisirken beklenmeyen hata:`, e);
+    console.error(`[campaign] ${slotName} çalışırken beklenmeyen hata:`, e);
   });
 
   return { runId, started: true, promise };
@@ -446,22 +446,22 @@ async function executeBroadcast(runId, { platform, text, customerIds }) {
     broadcastPlatformLoop:
     for (const p of platforms) {
       if (isCancelled(runId)) {
-        pushEvent('🛑', 'Calisma kullanici tarafindan iptal edildi.');
+        pushEvent('🛑', 'Çalışma kullanıcı tarafından iptal edildi.');
         break;
       }
       if (p === 'telegram' && telegram.getStatus().status !== 'connected') {
-        pushEvent('⏭️', 'Telegram bagli degil, atlandi');
+        pushEvent('⏭️', 'Telegram bağlı değil, atlandı');
         continue;
       }
       if (p === 'whatsapp' && whatsapp.getStatus().status !== 'connected') {
-        pushEvent('⏭️', 'WhatsApp bagli degil, atlandi');
+        pushEvent('⏭️', 'WhatsApp bağlı değil, atlandı');
         continue;
       }
 
       const cap = dailyCapFor(p);
       let remainingUserBudget = cap - countDistinctCustomersToday(p);
       if (remainingUserBudget <= 0) {
-        pushEvent('⏭️', `${p}: gunluk farkli musteri limiti doldu, atlandi`);
+        pushEvent('⏭️', `${p}: günlük farklı müşteri limiti doldu, atlandı`);
         continue;
       }
 
@@ -472,28 +472,28 @@ async function executeBroadcast(runId, { platform, text, customerIds }) {
       }
 
       if (!targets.length) {
-        pushEvent('⏭️', `${p}: gonderilecek musteri yok`);
+        pushEvent('⏭️', `${p}: gönderilecek müşteri yok`);
         continue;
       }
 
       state.totalTargets += targets.length;
-      pushEvent('📋', `${p}: ${targets.length} musteriye mesaj gonderimi baslatiliyor`);
+      pushEvent('📋', `${p}: ${targets.length} müşteriye mesaj gönderimi başlatılıyor`);
 
       for (const customer of targets) {
         if (isCancelled(runId)) {
-          pushEvent('🛑', 'Calisma kullanici tarafindan iptal edildi.');
+          pushEvent('🛑', 'Çalışma kullanıcı tarafından iptal edildi.');
           break broadcastPlatformLoop;
         }
         const isNewToday = !wasCustomerContactedToday(customer.id, p);
         if (isNewToday && remainingUserBudget <= 0) {
-          pushEvent('⏭️', `${p}: gunluk farkli musteri limiti doldu, kalan musteriler atlandi`);
+          pushEvent('⏭️', `${p}: günlük farklı müşteri limiti doldu, kalan müşteriler atlandı`);
           break;
         }
-        pushEvent('📤', `${customer.name} (${p}): mesaj gonderiliyor...`);
+        pushEvent('📤', `${customer.name} (${p}): mesaj gönderiliyor...`);
         try {
           const target = p === 'whatsapp' ? customer.whatsapp_number : customer.telegram_chat_id;
           if (!target) {
-            pushEvent('⏭️', `${customer.name} (${p}): ${p === 'whatsapp' ? 'WhatsApp numarasi' : 'Telegram baglantisi'} yok, atlandi`);
+            pushEvent('⏭️', `${customer.name} (${p}): ${p === 'whatsapp' ? 'WhatsApp numarası' : 'Telegram bağlantısı'} yok, atlandı`);
           } else {
             if (p === 'whatsapp') await whatsapp.sendText(target, text);
             else await telegram.sendText(target, text);
@@ -501,7 +501,7 @@ async function executeBroadcast(runId, { platform, text, customerIds }) {
               .run(customer.id, p, text, runId);
             state.totalSent++;
             if (isNewToday) remainingUserBudget--;
-            pushEvent('✅', `${customer.name} (${p}): mesaj gonderildi`);
+            pushEvent('✅', `${customer.name} (${p}): mesaj gönderildi`);
           }
         } catch (e) {
           state.errorCount++;
@@ -528,15 +528,15 @@ async function executeBroadcast(runId, { platform, text, customerIds }) {
 }
 
 function runMessageBroadcast({ platform, text, customerIds }) {
-  if (!text || !text.trim()) throw new Error('Mesaj metni bos olamaz');
-  if (!['whatsapp', 'telegram', 'both'].includes(platform)) throw new Error('Gecersiz platform');
+  if (!text || !text.trim()) throw new Error('Mesaj metni boş olamaz');
+  if (!['whatsapp', 'telegram', 'both'].includes(platform)) throw new Error('Geçersiz platform');
 
   const runInfo = db.prepare("INSERT INTO run_log (slot_name, kind, started_at) VALUES (?, 'broadcast', datetime('now'))").run('broadcast');
   const runId = runInfo.lastInsertRowid;
   registerRun(runId);
 
   const promise = executeBroadcast(runId, { platform, text: text.trim(), customerIds }).catch((e) => {
-    console.error('[campaign] toplu mesaj calisirken beklenmeyen hata:', e);
+    console.error('[campaign] toplu mesaj çalışırken beklenmeyen hata:', e);
   });
 
   return { runId, started: true, promise };

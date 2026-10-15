@@ -58,25 +58,25 @@ function handleUpdate(update) {
       const customer = customerService.getByTelegramLinkCode(code);
       if (customer) {
         customerService.setTelegramChatId(code, chatId);
-        callApi('sendMessage', { chat_id: chatId, text: `Merhaba ${customer.name}! Telegram hesabin basariyla baglandi, artik buradan paylasim alacaksin.` }).catch(() => {});
+        callApi('sendMessage', { chat_id: chatId, text: `Merhaba ${customer.name}! Telegram hesabın başarıyla bağlandı, artık buradan paylaşım alacaksın.` }).catch(() => {});
         return;
       }
     }
-    callApi('sendMessage', { chat_id: chatId, text: `Merhaba! Sohbet kimligin: ${chatId}\nBu kodu panelden musteri eslestirmede veya admin bildirim ayarinda kullanabilirsin.` }).catch(() => {});
+    callApi('sendMessage', { chat_id: chatId, text: `Merhaba! Sohbet kimliğin: ${chatId}\nBu kodu panelden müşteri eşleştirmede veya admin bildirim ayarında kullanabilirsin.` }).catch(() => {});
     return;
   }
 
   if (text === '/myid') {
-    callApi('sendMessage', { chat_id: chatId, text: `Sohbet kimligin: ${chatId}` }).catch(() => {});
+    callApi('sendMessage', { chat_id: chatId, text: `Sohbet kimliğin: ${chatId}` }).catch(() => {});
     return;
   }
 
   if (text === '/info') {
     const url = process.env.PUBLIC_BASE_URL;
     const lines = url
-      ? [`Yonetim paneli: ${url}`]
-      : ['Panel adresi henuz tanimli degil.', 'Railway > Variables kismina PUBLIC_BASE_URL ekleyip panelin adresini (orn. https://xxx.up.railway.app) gir.'];
-    lines.push('', 'Diger komutlar:', '/myid - sohbet kimligini gosterir', '/start <kod> - musteri hesabini baglar');
+      ? [`Yönetim paneli: ${url}`]
+      : ['Panel adresi henüz tanımlı değil.', 'Railway > Variables kısmına PUBLIC_BASE_URL ekleyip panelin adresini (örn. https://xxx.up.railway.app) gir.'];
+    lines.push('', 'Diğer komutlar:', '/myid - sohbet kimliğini gösterir', '/start <kod> - müşteri hesabini bağlar');
     callApi('sendMessage', { chat_id: chatId, text: lines.join('\n') }).catch(() => {});
   }
 }
@@ -101,7 +101,7 @@ function start() {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) {
     state.status = 'disabled';
-    state.lastError = 'TELEGRAM_BOT_TOKEN tanimli degil';
+    state.lastError = 'TELEGRAM_BOT_TOKEN tanımlı değil';
     return null;
   }
   state.token = token;
@@ -117,7 +117,7 @@ function getStatus() {
 }
 
 async function sendPhoto(chatId, absoluteFilePath, caption) {
-  if (state.status !== 'connected') throw new Error('Telegram bot baslatilmadi');
+  if (state.status !== 'connected') throw new Error('Telegram bot başlatılmadı');
   await callApiMultipart('sendPhoto', { chat_id: chatId, caption: caption || '' }, 'photo', absoluteFilePath);
 }
 
@@ -125,7 +125,7 @@ async function sendPhoto(chatId, absoluteFilePath, caption) {
 // sendMediaGroup en fazla 10 foto kabul eder; daha fazlasi cagiran
 // tarafindan 10'arli gruplara bolunmeli (bkz. chunkArray).
 async function sendPhotoGroup(chatId, absoluteFilePaths, caption) {
-  if (state.status !== 'connected') throw new Error('Telegram bot baslatilmadi');
+  if (state.status !== 'connected') throw new Error('Telegram bot başlatılmadı');
   if (!absoluteFilePaths.length) return;
   if (absoluteFilePaths.length === 1) {
     await sendPhoto(chatId, absoluteFilePaths[0], caption);
@@ -143,7 +143,7 @@ async function sendPhotoGroup(chatId, absoluteFilePaths, caption) {
 }
 
 async function sendText(chatId, text) {
-  if (state.status !== 'connected') throw new Error('Telegram bot baslatilmadi');
+  if (state.status !== 'connected') throw new Error('Telegram bot başlatılmadı');
   await callApi('sendMessage', { chat_id: chatId, text });
 }
 

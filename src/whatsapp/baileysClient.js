@@ -95,7 +95,7 @@ const VERIFY_CACHE_TTL_MS = 10 * 60 * 1000;
 // bekleyip zaman asimina ugrar. Once hizli bir kontrol yaparak net hata veririz.
 async function assertNumberOnWhatsApp(number) {
   const digits = String(number).replace(/[^0-9]/g, '');
-  if (!digits) throw new Error('Gecersiz WhatsApp numarasi (bos)');
+  if (!digits) throw new Error('Geçersiz WhatsApp numarası (boş)');
 
   const cached = verifiedNumberCache.get(digits);
   if (cached && Date.now() - cached.verifiedAt < VERIFY_CACHE_TTL_MS) {
@@ -105,11 +105,11 @@ async function assertNumberOnWhatsApp(number) {
   const results = await withTimeout(
     state.sock.onWhatsApp(digits),
     15000,
-    'WhatsApp numara kontrolu zaman asimina ugradi (baglanti veya ag sorunu)'
+    'WhatsApp numara kontrolü zaman aşımına uğradı (baglanti veya ağ sorunu)'
   );
   const found = Array.isArray(results) ? results[0] : null;
   if (!found || !found.exists) {
-    throw new Error(`${number} numarasi WhatsApp'ta kayitli degil`);
+    throw new Error(`${number} numarası WhatsApp'ta kayıtlı değil`);
   }
   verifiedNumberCache.set(digits, { jid: found.jid, verifiedAt: Date.now() });
   return found.jid;
@@ -117,7 +117,7 @@ async function assertNumberOnWhatsApp(number) {
 
 async function sendImage(number, absoluteFilePath, caption) {
   if (state.status !== 'connected' || !state.sock) {
-    throw new Error('WhatsApp baglantisi hazir degil');
+    throw new Error('WhatsApp bağlantısı hazır değil');
   }
   const jid = await assertNumberOnWhatsApp(number);
   await withTimeout(
@@ -126,19 +126,19 @@ async function sendImage(number, absoluteFilePath, caption) {
       caption: caption || undefined
     }),
     30000,
-    'Fotograf gonderimi zaman asimina ugradi (ag sorunu olabilir)'
+    'Fotoğraf gönderimi zaman aşımına uğradı (ağ sorunu olabilir)'
   );
 }
 
 async function sendText(number, text) {
   if (state.status !== 'connected' || !state.sock) {
-    throw new Error('WhatsApp baglantisi hazir degil');
+    throw new Error('WhatsApp bağlantısı hazır değil');
   }
   const jid = await assertNumberOnWhatsApp(number);
   await withTimeout(
     state.sock.sendMessage(jid, { text }),
     30000,
-    'Mesaj gonderimi zaman asimina ugradi (ag sorunu olabilir)'
+    'Mesaj gönderimi zaman aşımına uğradı (ağ sorunu olabilir)'
   );
 }
 

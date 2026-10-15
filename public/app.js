@@ -7,10 +7,10 @@ const api = {
     });
     if (res.status === 401) {
       showLogin();
-      throw new Error('Giris gerekli');
+      throw new Error('Giriş gerekli');
     }
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || 'Hata olustu');
+    if (!res.ok) throw new Error(data.error || 'Hata oluştu');
     return data;
   },
   get(url) { return this.call('GET', url); },
@@ -115,7 +115,7 @@ async function loadDashboard() {
   const waPill = s.whatsapp.status === 'connected' ? 'ok' : s.whatsapp.status === 'qr' ? 'warn' : 'bad';
   waBox.innerHTML = `${statusPill(waPill, s.whatsapp.status)} ${s.whatsapp.lastError && s.whatsapp.status !== 'connected' ? '<div class="muted small err-line">' + escapeHtml(s.whatsapp.lastError) + '</div>' : ''}`;
   const qrWrap = document.getElementById('wa-qr-wrap');
-  qrWrap.innerHTML = s.whatsapp.qrDataUrl ? `<img src="${s.whatsapp.qrDataUrl}" alt="QR" /><p class="muted small">Telefonunda WhatsApp > Baglı Cihazlar > Cihaz Baglama ile bu kodu okut.</p>` : '';
+  qrWrap.innerHTML = s.whatsapp.qrDataUrl ? `<img src="${s.whatsapp.qrDataUrl}" alt="QR" /><p class="muted small">Telefonunda WhatsApp > Baglı Cihazlar > Cihaz Bağlama ile bu kodu okut.</p>` : '';
 
   const tgBox = document.getElementById('tg-status');
   const tgPill = s.telegram.status === 'connected' ? 'ok' : 'bad';
@@ -128,22 +128,22 @@ async function loadDashboard() {
       <div class="stat"><div class="stat-value">${s.sentToday.whatsapp}<span class="stat-of">/${capText(s.dailyCap.whatsapp)}</span></div><div class="stat-label">WhatsApp</div></div>
       <div class="stat"><div class="stat-value">${s.sentToday.telegram}<span class="stat-of">/${capText(s.dailyCap.telegram)}</span></div><div class="stat-label">Telegram</div></div>
     </div>
-    ${s.warmupActive ? '<span class="pill warn">Isinma modu aktif</span>' : ''}
+    ${s.warmupActive ? '<span class="pill warn">Isınma modu aktif</span>' : ''}
   `;
 
   const progressBox = document.getElementById('batch-progress');
   const bp = s.batchProgress;
   progressBox.innerHTML = `
-    <p class="muted small">Arsiv: ${escapeHtml(s.activeBatch.label)} · toplam ${bp.totalPhotos} fotograf</p>
+    <p class="muted small">Arşiv: ${escapeHtml(s.activeBatch.label)} · toplam ${bp.totalPhotos} fotoğraf</p>
     <div class="table-wrap"><table class="table">
-      <thead><tr><th>Musteri</th><th>Ilerleme</th><th>Kategoriler</th><th>Durum</th></tr></thead>
+      <thead><tr><th>Müşteri</th><th>Ilerleme</th><th>Kategoriler</th><th>Durum</th></tr></thead>
       <tbody>
         ${bp.customers.map((c) => `<tr>
           <td>${escapeHtml(c.customer.name)}</td>
           <td>${renderMiniBar(c.sent, c.total)}</td>
           <td class="wrap">${renderCategoryChips(c.categories)}</td>
-          <td>${c.completed ? '<span class="pill ok">tamamlandi</span>' : '<span class="pill">devam</span>'}</td>
-        </tr>`).join('') || '<tr><td colspan="4" class="muted">Musteri yok</td></tr>'}
+          <td>${c.completed ? '<span class="pill ok">tamamlandı</span>' : '<span class="pill">devam</span>'}</td>
+        </tr>`).join('') || '<tr><td colspan="4" class="muted">Müşteri yok</td></tr>'}
       </tbody>
     </table></div>
   `;
@@ -151,7 +151,7 @@ async function loadDashboard() {
   const runNowRow = document.getElementById('run-now-row');
   if (!runNowRow.dataset.loaded) {
     const { slots } = await api.get('/api/settings');
-    runNowRow.innerHTML = slots.map((sl) => `<button data-slot="${sl.name}" class="run-now-btn">${sl.label} simdi calistir</button>`).join('');
+    runNowRow.innerHTML = slots.map((sl) => `<button data-slot="${sl.name}" class="run-now-btn">${sl.label} şimdi çalıştır</button>`).join('');
     runNowRow.querySelectorAll('.run-now-btn').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const original = btn.textContent;
@@ -159,7 +159,7 @@ async function loadDashboard() {
         try {
           const r = await api.post(`/api/slots/${btn.dataset.slot}/run-now`);
           if (r.skipped) {
-            alert('Baslamadi: ' + (r.reason || 'bilinmeyen sebep'));
+            alert('Başlamadı: ' + (r.reason || 'bilinmeyen sebep'));
           }
         } catch (e) {
           alert('Hata: ' + e.message);
@@ -173,13 +173,13 @@ async function loadDashboard() {
   }
 
   const runs = await api.get('/api/runs');
-  document.getElementById('run-log').innerHTML = runs.map(renderRunCard).join('') || '<p class="muted small">Henuz calisma yok</p>';
+  document.getElementById('run-log').innerHTML = runs.map(renderRunCard).join('') || '<p class="muted small">Henüz çalışma yok</p>';
   document.querySelectorAll('.run-cancel-btn').forEach((btn) => {
     btn.addEventListener('click', () => cancelRun(btn.dataset.runId));
   });
 }
 
-const KIND_LABELS = { slot: 'Fotograf Gonderimi', broadcast: 'Toplu Mesaj' };
+const KIND_LABELS = { slot: 'Fotoğraf Gönderimi', broadcast: 'Toplu Mesaj' };
 
 function renderRunCard(r) {
   const inProgress = !r.finished_at;
@@ -191,32 +191,32 @@ function renderRunCard(r) {
   const eventsHtml = events.slice(-40).reverse().map((ev) => {
     if (typeof ev === 'string') return `<div class="ev"><span>${escapeHtml(ev)}</span></div>`;
     return `<div class="ev"><span class="ev-time">${escapeHtml(ev.t || '')}</span><span>${ev.icon || ''} ${escapeHtml(ev.text || '')}</span></div>`;
-  }).join('') || '<div class="muted small">Henuz kayit yok</div>';
+  }).join('') || '<div class="muted small">Henüz kayit yok</div>';
 
   return `
     <div class="run-card">
       <div class="run-head">
         <div>
           <strong>${escapeHtml(kindLabel)}</strong>
-          <span class="muted small">(${escapeHtml(r.slot_name)}) - basladi: ${escapeHtml(r.started_at)}</span>
+          <span class="muted small">(${escapeHtml(r.slot_name)}) - başladı: ${escapeHtml(r.started_at)}</span>
         </div>
         <div style="display:flex; gap:6px; align-items:center;">
-          ${inProgress ? '<span class="pill warn">devam ediyor</span>' : (r.error_count > 0 ? '<span class="pill bad">hatali bitti</span>' : '<span class="pill ok">bitti</span>')}
-          ${inProgress ? `<button class="danger run-cancel-btn" data-run-id="${r.id}">Iptal Et</button>` : ''}
+          ${inProgress ? '<span class="pill warn">devam ediyor</span>' : (r.error_count > 0 ? '<span class="pill bad">hatalı bitti</span>' : '<span class="pill ok">bitti</span>')}
+          ${inProgress ? `<button class="danger run-cancel-btn" data-run-id="${r.id}">İptal Et</button>` : ''}
         </div>
       </div>
       ${total > 0 ? `
         <div class="progress-bar"><div style="width:${pct}%"></div></div>
-        <div class="muted small">${done}/${total} musteri islendi - ${pct}%</div>
+        <div class="muted small">${done}/${total} müşteri işlendi - ${pct}%</div>
       ` : ''}
-      <div class="muted small" style="margin:6px 0;">Gonderim: <b>${r.sent_count}</b> &nbsp; Hata: <b>${r.error_count}</b></div>
+      <div class="muted small" style="margin:6px 0;">Gönderim: <b>${r.sent_count}</b> &nbsp; Hata: <b>${r.error_count}</b></div>
       <div class="run-events">${eventsHtml}</div>
     </div>
   `;
 }
 
 async function cancelRun(runId) {
-  if (!confirm('Bu calisma iptal edilsin mi? Kalan gonderimler yapilmayacak.')) return;
+  if (!confirm('Bu çalışma iptal edilsin mi? Kalan gönderimler yapılmayacak.')) return;
   try {
     await api.post(`/api/runs/${runId}/cancel`);
   } catch (e) {
@@ -225,7 +225,7 @@ async function cancelRun(runId) {
   loadDashboard();
 }
 
-const STATUS_LABELS = { connected: 'Bagli', qr: 'QR bekleniyor', connecting: 'Baglaniyor', disconnected: 'Bagli degil', disabled: 'Kapali' };
+const STATUS_LABELS = { connected: 'Bağlı', qr: 'QR bekleniyor', connecting: 'Bağlanıyor', disconnected: 'Bağlı değil', disabled: 'Kapalı' };
 function statusPill(tone, status) {
   return `<span class="pill ${tone} pill-dot">${STATUS_LABELS[status] || escapeHtml(status)}</span>`;
 }
@@ -265,10 +265,10 @@ async function loadPhotos() {
   document.querySelector('#batches-table tbody').innerHTML = batches.map((b) => `
     <tr>
       <td>${b.id}</td><td>${b.label}</td>
-      <td>${b.status === 'active' ? '<span class="pill ok">aktif</span>' : '<span class="pill warn">arsivlendi</span>'}</td>
+      <td>${b.status === 'active' ? '<span class="pill ok">aktif</span>' : '<span class="pill warn">arşivlendi</span>'}</td>
       <td>${b.photo_count}</td><td>${b.created_at}</td>
     </tr>
-  `).join('') || '<tr><td colspan="5" class="muted">Arsiv yok</td></tr>';
+  `).join('') || '<tr><td colspan="5" class="muted">Arşiv yok</td></tr>';
 
   loadCategoriesList();
 }
@@ -280,11 +280,11 @@ async function loadCategoriesList() {
       <span>${escapeHtml(c.name)} <span class="muted small">(${c.photo_count} foto)</span></span>
       <button data-del-cat="${c.id}" class="danger">Sil</button>
     </li>
-  `).join('') || '<li class="muted">Henuz kategori yok. Fotograf yuklerken olusturabilirsin.</li>';
+  `).join('') || '<li class="muted">Henüz kategori yok. Fotoğraf yüklerken oluşturabilirsin.</li>';
 
   document.querySelectorAll('[data-del-cat]').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      if (!confirm('Kategori silinsin mi? Fotograflar silinmez, sadece etiket kaldirilir.')) return;
+      if (!confirm('Kategori silinsin mi? Fotoğraflar silinmez, sadece etiket kaldırılır.')) return;
       await api.del(`/api/categories/${btn.dataset.delCat}`);
       loadCategoriesList();
     });
@@ -295,16 +295,16 @@ async function uploadPhotos() {
   const input = document.getElementById('photo-input');
   const categories = document.getElementById('photo-categories').value;
   const resultBox = document.getElementById('photo-upload-result');
-  if (!input.files.length) { resultBox.textContent = 'Dosya secilmedi'; return; }
+  if (!input.files.length) { resultBox.textContent = 'Dosya seçilmedi'; return; }
   const formData = new FormData();
   for (const f of input.files) formData.append('photos', f);
   formData.append('categories', categories);
-  resultBox.textContent = 'Yukleniyor...';
+  resultBox.textContent = 'Yükleniyor...';
   try {
     const res = await fetch('/api/photos/upload', { method: 'POST', body: formData });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Hata');
-    resultBox.textContent = `${data.uploaded} fotograf yuklendi.`;
+    resultBox.textContent = `${data.uploaded} fotoğraf yüklendi.`;
     input.value = '';
     loadPhotos();
   } catch (e) {
@@ -334,7 +334,7 @@ async function loadCustomers() {
       <td class="muted small">/start ${c.telegram_link_code}</td>
       <td><button data-del="${c.id}" class="danger">Sil</button></td>
     </tr>
-  `).join('') || '<tr><td colspan="8" class="muted">Musteri yok</td></tr>';
+  `).join('') || '<tr><td colspan="8" class="muted">Müşteri yok</td></tr>';
 
   document.querySelectorAll('.cust-edit').forEach((el) => {
     el.addEventListener('change', async () => {
@@ -346,7 +346,7 @@ async function loadCustomers() {
   });
   document.querySelectorAll('[data-del]').forEach((btn) => {
     btn.addEventListener('click', async () => {
-      if (!confirm('Musteri silinsin mi?')) return;
+      if (!confirm('Müşteri silinsin mi?')) return;
       await api.del(`/api/customers/${btn.dataset.del}`);
       loadCustomers();
     });
@@ -357,14 +357,14 @@ async function addCustomer(platform) {
   if (platform === 'whatsapp') {
     const name = document.getElementById('cust-wa-name').value.trim();
     const whatsapp_number = document.getElementById('cust-wa-number').value.trim();
-    if (!name) { alert('Isim gerekli'); return; }
-    if (!whatsapp_number) { alert('WhatsApp numarasi gerekli'); return; }
+    if (!name) { alert('İsim gerekli'); return; }
+    if (!whatsapp_number) { alert('WhatsApp numarası gerekli'); return; }
     await api.post('/api/customers', { name, whatsapp_number, platform: 'whatsapp' });
     document.getElementById('cust-wa-name').value = '';
     document.getElementById('cust-wa-number').value = '';
   } else {
     const name = document.getElementById('cust-tg-name').value.trim();
-    if (!name) { alert('Isim gerekli'); return; }
+    if (!name) { alert('İsim gerekli'); return; }
     await api.post('/api/customers', { name, platform: 'telegram' });
     document.getElementById('cust-tg-name').value = '';
   }
@@ -387,7 +387,7 @@ async function loadSchedule() {
         <label>Saat (24s, HH:MM)
           <input type="text" data-field="time" value="${s.time}" />
         </label>
-        <label>Musteri sayisi (bu calismada)
+        <label>Müşteri sayısı (bu çalışmada)
           <input type="number" min="0" data-field="customer_count" value="${s.customer_count}" />
         </label>
         <label>WhatsApp
@@ -398,9 +398,9 @@ async function loadSchedule() {
         </label>
       </div>
 
-      <p class="muted small" style="margin-top:14px;">Gonderim sirasi: her secili musteri icin bu adimlar yukaridan asagiya sirayla calisir (orn. 20 foto -> indirim mesaji -> 20 foto -> yeni koleksiyon mesaji).</p>
+      <p class="muted small" style="margin-top:14px;">Gönderim sırası: her seçili müşteri için bu adımlar yukarıdan aşağıya sırayla çalışır (örn. 20 foto -> indirim mesajı -> 20 foto -> yeni koleksiyon mesajı).</p>
       <div class="steps-editor" data-slot="${s.name}"></div>
-      <button class="step-add-btn ghost" data-slot="${s.name}">+ Adim ekle</button>
+      <button class="step-add-btn ghost" data-slot="${s.name}">+ Adım ekle</button>
 
       <div class="btn-row">
         <button class="slot-save-btn">Kaydet</button>
@@ -460,28 +460,28 @@ function appendStepRow(editor, step) {
     <label class="small" style="display:inline-flex; gap:4px; align-items:center; margin-right:10px;">
       <input type="checkbox" data-cat-id="${c.id}" ${stepCatIds.includes(c.id) ? 'checked' : ''} /> ${escapeHtml(c.name)}
     </label>
-  `).join('') || '<span class="muted small">Henuz kategori yok (Fotograflar sekmesinden ekleyebilirsin)</span>';
+  `).join('') || '<span class="muted small">Henüz kategori yok (Fotoğraflar sekmesinden ekleyebilirsin)</span>';
 
   row.innerHTML = `
     <div class="step-num">${num}</div>
     <div class="step-fields">
       <select data-field="type">
-        <option value="photos" ${step.type === 'photos' ? 'selected' : ''}>Fotograf Blogu</option>
-        <option value="message" ${step.type === 'message' ? 'selected' : ''}>Mesaj Blogu</option>
+        <option value="photos" ${step.type === 'photos' ? 'selected' : ''}>Fotoğraf Bloğu</option>
+        <option value="message" ${step.type === 'message' ? 'selected' : ''}>Mesaj Bloğu</option>
       </select>
       <input type="number" min="1" data-field="photo_count" value="${step.photo_count || 1}" placeholder="Adet" style="width:90px; ${step.type === 'message' ? 'display:none;' : ''}" />
       <select data-field="message_mode" style="${step.type === 'photos' ? 'display:none;' : ''}">
-        <option value="random_caption" ${step.message_mode !== 'custom' ? 'selected' : ''}>Rastgele sablondan sec</option>
-        <option value="custom" ${step.message_mode === 'custom' ? 'selected' : ''}>Ozel metin yaz</option>
+        <option value="random_caption" ${step.message_mode !== 'custom' ? 'selected' : ''}>Rastgele şablondan seç</option>
+        <option value="custom" ${step.message_mode === 'custom' ? 'selected' : ''}>Özel metin yaz</option>
       </select>
       <button class="step-up ghost" title="Yukari tasi">↑</button>
       <button class="step-down ghost" title="Asagi tasi">↓</button>
       <button class="step-del danger" title="Sil">Sil</button>
     </div>
     <div class="step-categories muted small" style="margin-top:6px; ${step.type === 'message' ? 'display:none;' : ''}">
-      Kategori (secmezsen TUM fotograflardan): ${catCheckboxes}
+      Kategori (seçmezsen TÜM fotoğraflardan): ${catCheckboxes}
     </div>
-    <textarea data-field="message_text" placeholder="Ozel mesaj metni" style="${step.type === 'message' && step.message_mode === 'custom' ? '' : 'display:none;'}">${step.message_text || ''}</textarea>
+    <textarea data-field="message_text" placeholder="Özel mesaj metni" style="${step.type === 'message' && step.message_mode === 'custom' ? '' : 'display:none;'}">${step.message_text || ''}</textarea>
   `;
 
   const typeSel = row.querySelector('[data-field="type"]');
@@ -569,12 +569,12 @@ async function loadPreview() {
     } catch (e) { /* onemli degil */ }
 
     if (!photo && !captionText) {
-      box.innerHTML = '<div class="empty">Henuz fotograf veya mesaj sablonu yok.</div>';
+      box.innerHTML = '<div class="empty">Henüz fotoğraf veya mesaj şablonu yok.</div>';
       continue;
     }
     box.innerHTML = `
       <div class="bubble">
-        ${photo ? `<img src="/api/photos/file/${encodeURI(photo.filepath)}" alt="onizleme" />` : ''}
+        ${photo ? `<img src="/api/photos/file/${encodeURI(photo.filepath)}" alt="önizleme" />` : ''}
         ${captionText ? `<div class="cap-text">${escapeHtml(captionText)}</div>` : ''}
       </div>
     `;
@@ -623,10 +623,10 @@ async function loadBroadcastTab() {
     <li>
       <label class="small" style="display:flex; gap:8px; align-items:center;">
         <input type="checkbox" class="bc-cust-check" value="${c.id}" />
-        ${escapeHtml(c.name)} <span class="muted">(${c.platform}${c.whatsapp_number ? ', WA: ' + escapeHtml(c.whatsapp_number) : ''}${c.telegram_chat_id ? ', TG baglandi' : ''})</span>
+        ${escapeHtml(c.name)} <span class="muted">(${c.platform}${c.whatsapp_number ? ', WA: ' + escapeHtml(c.whatsapp_number) : ''}${c.telegram_chat_id ? ', TG bağlandı' : ''})</span>
       </label>
     </li>
-  `).join('') || '<li class="muted">Musteri yok</li>';
+  `).join('') || '<li class="muted">Müşteri yok</li>';
 
   const selectAll = document.getElementById('bc-select-all');
   selectAll.checked = false;
@@ -646,18 +646,18 @@ async function sendBroadcast() {
   const platform = document.getElementById('bc-platform').value;
   const text = document.getElementById('bc-text').value.trim();
   const resultBox = document.getElementById('bc-result');
-  if (!text) { resultBox.textContent = 'Mesaj metni bos olamaz'; return; }
+  if (!text) { resultBox.textContent = 'Mesaj metni boş olamaz'; return; }
   const allSelected = document.getElementById('bc-select-all').checked;
   const customerIds = allSelected ? [] : Array.from(document.querySelectorAll('.bc-cust-check:checked')).map((el) => parseInt(el.value, 10));
   if (!allSelected && !customerIds.length) {
-    resultBox.textContent = 'En az bir musteri sec veya "Tum Musteriler" isaretle';
+    resultBox.textContent = 'En az bir müşteri seç veya "Tüm Müşteriler" işaretle';
     return;
   }
 
-  resultBox.textContent = 'Gonderiliyor...';
+  resultBox.textContent = 'Gönderiliyor...';
   try {
     await api.post('/api/broadcast', { platform, text, customerIds: customerIds.length ? customerIds : undefined });
-    resultBox.textContent = 'Basladi. Ilerlemeyi "Panel" sekmesindeki Son Calismalar bolumunden izleyebilirsin.';
+    resultBox.textContent = 'Başladı. İlerlemeyi "Panel" sekmesindeki Son Çalışmalar bölümünden izleyebilirsin.';
     document.getElementById('bc-text').value = '';
   } catch (e) {
     resultBox.textContent = 'Hata: ' + e.message;
@@ -666,18 +666,18 @@ async function sendBroadcast() {
 
 // ---------- Settings ----------
 const SETTINGS_FIELDS = [
-  { key: 'intra_step_delay_min_sec', label: 'Blok ici min gecikme (sn, ondalik olabilir, orn. 0.5) - 20 fotoluk blokta foto arasi. Bunu hizlandirmak gorece guvenli.', type: 'number', step: '0.1' },
-  { key: 'intra_step_delay_max_sec', label: 'Blok ici max gecikme (sn, ondalik olabilir)', type: 'number', step: '0.1' },
-  { key: 'delay_min_sec', label: 'Bloklar/musteriler arasi min gecikme (sn) - anti-ban icin asil onemli olan budur', type: 'number' },
-  { key: 'delay_max_sec', label: 'Bloklar/musteriler arasi max gecikme (sn)', type: 'number' },
-  { key: 'daily_send_cap_whatsapp', label: 'WhatsApp gunluk farkli musteri limiti (orn. 30 = gunde en fazla 30 FARKLI musteriye gonderim, 0 = limitsiz)', type: 'number' },
-  { key: 'daily_send_cap_telegram', label: 'Telegram gunluk farkli musteri limiti (0 = limitsiz)', type: 'number' },
-  { key: 'warmup_enabled', label: 'Isinma modu aktif (true/false)', type: 'text' },
-  { key: 'warmup_days', label: 'Isinma suresi (gun)', type: 'number' },
-  { key: 'warmup_max_per_day', label: 'Isinmada gunluk max WhatsApp', type: 'number' },
-  { key: 'admin_telegram_chat_id', label: 'Admin Telegram chat id (rapor/hata bildirimi icin, bota /myid yazarak ogrenebilirsin)', type: 'text' },
+  { key: 'intra_step_delay_min_sec', label: 'Blok içi min gecikme (sn, ondalık olabilir, örn. 0.5) - 20 fotoluk blokta foto arası. Bunu hızlandırmak görece güvenli.', type: 'number', step: '0.1' },
+  { key: 'intra_step_delay_max_sec', label: 'Blok içi max gecikme (sn, ondalık olabilir)', type: 'number', step: '0.1' },
+  { key: 'delay_min_sec', label: 'Bloklar/müşteriler arası min gecikme (sn) - anti-ban için asıl önemli olan budur', type: 'number' },
+  { key: 'delay_max_sec', label: 'Bloklar/müşteriler arası max gecikme (sn)', type: 'number' },
+  { key: 'daily_send_cap_whatsapp', label: 'WhatsApp günlük farklı müşteri limiti (örn. 30 = günde en fazla 30 FARKLI müşteriye gönderim, 0 = limitsiz)', type: 'number' },
+  { key: 'daily_send_cap_telegram', label: 'Telegram günlük farklı müşteri limiti (0 = limitsiz)', type: 'number' },
+  { key: 'warmup_enabled', label: 'Isınma modu aktif (true/false)', type: 'text' },
+  { key: 'warmup_days', label: 'Isınma süresi (gün)', type: 'number' },
+  { key: 'warmup_max_per_day', label: 'Isınmada günlük max WhatsApp', type: 'number' },
+  { key: 'admin_telegram_chat_id', label: 'Admin Telegram chat id (rapor/hata bildirimi için, bota /myid yazarak öğrenebilirsin)', type: 'text' },
   { key: 'admin_notify_enabled', label: 'Admin Telegram bildirimleri aktif (true/false)', type: 'text' },
-  { key: 'force_single_photo_send', label: 'Telegram foto gruplamayi kapat, tek tek gonder (true/false; false=normal, 10-10 gruplanir)', type: 'text' }
+  { key: 'force_single_photo_send', label: 'Telegram foto gruplamayı kapat, tek tek gönder (true/false; false=normal, 10-10 gruplanır)', type: 'text' }
 ];
 
 async function loadSettings() {

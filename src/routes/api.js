@@ -49,7 +49,7 @@ router.get('/runs', (req, res) => {
 router.post('/runs/:id/cancel', (req, res) => {
   const runId = parseInt(req.params.id, 10);
   const ok = campaignService.cancelRun(runId);
-  if (!ok) return res.status(400).json({ error: 'Bu calisma zaten bitmis veya bulunamadi' });
+  if (!ok) return res.status(400).json({ error: 'Bu çalışma zaten bitmiş veya bulunamadı' });
   res.json({ ok: true });
 });
 
@@ -142,7 +142,7 @@ router.get('/captions/:platform', (req, res) => {
 
 router.post('/captions/:platform', (req, res) => {
   const { text } = req.body || {};
-  if (!text || !text.trim()) return res.status(400).json({ error: 'Metin bos olamaz' });
+  if (!text || !text.trim()) return res.status(400).json({ error: 'Metin boş olamaz' });
   settingsService.addCaption(req.params.platform, text.trim());
   res.json({ ok: true });
 });
@@ -162,7 +162,7 @@ router.get('/customers', (req, res) => res.json(customerService.list()));
 
 router.post('/customers', (req, res) => {
   const { name, whatsapp_number, telegram_chat_id, platform } = req.body || {};
-  if (!name || !name.trim()) return res.status(400).json({ error: 'Isim gerekli' });
+  if (!name || !name.trim()) return res.status(400).json({ error: 'İsim gerekli' });
   const customer = customerService.create({ name: name.trim(), whatsapp_number, telegram_chat_id, platform });
   res.json(customer);
 });
@@ -208,7 +208,7 @@ router.get('/categories', (req, res) => res.json(categoryService.list()));
 router.post('/categories', (req, res) => {
   const { name } = req.body || {};
   const category = categoryService.getOrCreate(name);
-  if (!category) return res.status(400).json({ error: 'Kategori adi bos olamaz' });
+  if (!category) return res.status(400).json({ error: 'Kategori adı boş olamaz' });
   res.json(category);
 });
 

@@ -143,8 +143,8 @@ function seedDefaults() {
       VALUES (?, ?, 1, ?, ?, ?, ?, 1)
     `);
     insertSlot.run('morning', 'Sabah', '10:00', 10, 1, 'whatsapp,telegram');
-    insertSlot.run('afternoon', 'Ogle', '14:00', 10, 1, 'whatsapp,telegram');
-    insertSlot.run('evening', 'Aksam', '19:00', 10, 1, 'whatsapp,telegram');
+    insertSlot.run('afternoon', 'Öğle', '14:00', 10, 1, 'whatsapp,telegram');
+    insertSlot.run('evening', 'Akşam', '19:00', 10, 1, 'whatsapp,telegram');
   }
 
   const defaultSettings = {
@@ -171,13 +171,18 @@ function seedDefaults() {
   const capCount = db.prepare('SELECT COUNT(*) AS c FROM caption_templates').get().c;
   if (capCount === 0) {
     const insertCap = db.prepare('INSERT INTO caption_templates (platform, text, active) VALUES (?, ?, 1)');
-    insertCap.run('whatsapp', 'Bugune ozel firsatlari kacirma! Detaylar icin bize yaz.');
-    insertCap.run('telegram', 'Bugune ozel firsatlari kacirma! Detaylar icin bize yaz.');
+    insertCap.run('whatsapp', 'Bugüne özel fırsatları kaçırma! Detaylar için bize yaz.');
+    insertCap.run('telegram', 'Bugüne özel fırsatları kaçırma! Detaylar için bize yaz.');
   }
+
+  // Eski kurulumlardaki Turkce karaktersiz etiketleri duzelt.
+  db.prepare("UPDATE slots SET label = 'Öğle' WHERE label = 'Ogle'").run();
+  db.prepare("UPDATE slots SET label = 'Akşam' WHERE label = 'Aksam'").run();
+  db.prepare("UPDATE batches SET label = 'İlk Arşiv' WHERE label = 'Ilk Arsiv'").run();
 
   const activeBatch = db.prepare("SELECT id FROM batches WHERE status = 'active' LIMIT 1").get();
   if (!activeBatch) {
-    db.prepare("INSERT INTO batches (label, status) VALUES (?, 'active')").run('Ilk Arsiv');
+    db.prepare("INSERT INTO batches (label, status) VALUES (?, 'active')").run('İlk Arşiv');
   }
 
   // Her slotun en az bir adim sirasi (step) olmasini sagla. Eski kayitlarda

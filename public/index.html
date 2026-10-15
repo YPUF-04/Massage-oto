@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Massage Oto · Yonetim Paneli</title>
+<title>Massage Oto · Yönetim Paneli</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -31,16 +31,16 @@
   <form id="login-form" class="login-box">
     <div class="brand brand-lg"><span class="brand-mark">M</span><span>Massage Oto</span></div>
     <div>
-      <h1>Tekrar hos geldin</h1>
-      <p class="muted">Otomasyon paneline giris yap.</p>
+      <h1>Tekrar <em>hoş</em> geldin</h1>
+      <p class="muted">Otomasyon paneline giriş yap.</p>
     </div>
-    <label class="field">Kullanici adi
+    <label class="field">Kullanıcı adı
       <input id="login-username" type="text" placeholder="admin" autocomplete="username" />
     </label>
-    <label class="field">Sifre
+    <label class="field">Şifre
       <input id="login-password" type="password" placeholder="••••••••" autocomplete="current-password" />
     </label>
-    <button type="submit" class="btn-lg">Giris yap</button>
+    <button type="submit" class="btn-lg">Giriş yap</button>
     <div id="login-error" class="error"></div>
   </form>
 </div>
@@ -51,11 +51,11 @@
     <nav id="tabs" class="tabs">
       <button data-tab="dashboard" class="tab-btn active"><svg class="ico"><use href="#i-home"/></svg>Anasayfa</button>
       <button data-tab="schedule" class="tab-btn"><svg class="ico"><use href="#i-bolt"/></svg>Otomasyon</button>
-      <button data-tab="customers" class="tab-btn"><svg class="ico"><use href="#i-users"/></svg>Musteriler</button>
+      <button data-tab="customers" class="tab-btn"><svg class="ico"><use href="#i-users"/></svg>Müşteriler</button>
       <button data-tab="captions" class="tab-btn"><svg class="ico"><use href="#i-chat"/></svg>Mesajlar</button>
       <button data-tab="settings" class="tab-btn"><svg class="ico"><use href="#i-gear"/></svg>Ayarlar</button>
     </nav>
-    <button id="logout-btn" class="ghost"><svg class="ico"><use href="#i-out"/></svg>Cikis</button>
+    <button id="logout-btn" class="ghost"><svg class="ico"><use href="#i-out"/></svg>Çıkış</button>
   </aside>
 
   <main id="content">
@@ -63,7 +63,7 @@
     <section id="tab-dashboard" class="tab-panel">
       <header class="page-head">
         <div>
-          <p class="eyebrow">Genel bakis</p>
+          <p class="eyebrow">Genel bakış</p>
           <h2>Anasayfa</h2>
         </div>
       </header>
@@ -71,36 +71,36 @@
       <div class="grid">
         <div class="card card-wa">
           <div class="card-title"><span class="icon-tile tile-wa"><svg class="ico"><use href="#i-wa"/></svg></span><h3>WhatsApp</h3></div>
-          <div id="wa-status" class="status-line">Yukleniyor...</div>
+          <div id="wa-status" class="status-line">Yükleniyor...</div>
           <div id="wa-qr-wrap"></div>
           <div class="btn-row">
-            <button id="wa-connect-btn">Baglan / QR goster</button>
+            <button id="wa-connect-btn">Bağlan / QR göster</button>
             <button id="wa-logout-btn" class="danger">Oturumu kapat</button>
           </div>
         </div>
         <div class="card card-tg">
           <div class="card-title"><span class="icon-tile tile-tg"><svg class="ico"><use href="#i-tg"/></svg></span><h3>Telegram</h3></div>
-          <div id="tg-status" class="status-line">Yukleniyor...</div>
-          <p class="muted small">Musterilerin botuna <code>/start</code> yazip baglanmasi gerekir.</p>
+          <div id="tg-status" class="status-line">Yükleniyor...</div>
+          <p class="muted small">Müşterilerin botuna <code>/start</code> yazıp bağlanması gerekir.</p>
         </div>
         <div class="card card-stat">
-          <div class="card-title"><span class="icon-tile tile-brand"><svg class="ico"><use href="#i-target"/></svg></span><h3>Bugun ulasilan musteri</h3></div>
-          <div id="today-stats" class="status-line">Yukleniyor...</div>
+          <div class="card-title"><span class="icon-tile tile-brand"><svg class="ico"><use href="#i-target"/></svg></span><h3>Bugün ulaşılan müşteri</h3></div>
+          <div id="today-stats" class="status-line">Yükleniyor...</div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-title"><span class="icon-tile"><svg class="ico"><use href="#i-layers"/></svg></span><h3>Aktif arsiv ilerlemesi</h3></div>
+        <div class="card-title"><span class="icon-tile"><svg class="ico"><use href="#i-layers"/></svg></span><h3>Aktif arşiv ilerlemesi</h3></div>
         <div id="batch-progress"></div>
       </div>
 
       <div class="card card-run">
-        <div class="card-title"><span class="icon-tile tile-brand"><svg class="ico"><use href="#i-play"/></svg></span><h3>Simdi calistir</h3></div>
+        <div class="card-title"><span class="icon-tile tile-brand"><svg class="ico"><use href="#i-play"/></svg></span><h3>Şimdi çalıştır</h3></div>
         <div id="run-now-row" class="btn-row"></div>
       </div>
 
       <div class="card">
-        <div class="card-title"><span class="icon-tile"><svg class="ico"><use href="#i-pulse"/></svg></span><h3>Son calismalar</h3></div>
+        <div class="card-title"><span class="icon-tile"><svg class="ico"><use href="#i-pulse"/></svg></span><h3>Son çalışmalar</h3></div>
         <div id="run-log"></div>
       </div>
     </section>
@@ -108,33 +108,33 @@
     <section id="tab-customers" class="tab-panel" style="display:none;">
       <header class="page-head">
         <div>
-          <p class="eyebrow">Kisiler</p>
-          <h2>Musteriler</h2>
-          <p class="muted">WhatsApp veya Telegram uzerinden musteri ekle; her musteriye hangi kategorinin gittigini takip et.</p>
+          <p class="eyebrow">Kişiler</p>
+          <h2>Müşteriler</h2>
+          <p class="muted">WhatsApp veya Telegram üzerinden müşteri ekle; her müşteriye hangi kategorinin gittiğini takip et.</p>
         </div>
       </header>
       <div class="grid">
         <div class="card">
           <div class="card-title"><span class="icon-tile tile-wa"><svg class="ico"><use href="#i-wa"/></svg></span><h3>WhatsApp'tan ekle</h3></div>
           <div class="form-row" style="flex-direction:column;">
-            <input id="cust-wa-name" placeholder="Isim" />
+            <input id="cust-wa-name" placeholder="İsim" />
             <input id="cust-wa-number" placeholder="WhatsApp no (905551112233)" />
-            <button id="cust-wa-add-btn">WhatsApp Musterisi Ekle</button>
+            <button id="cust-wa-add-btn">WhatsApp müşterisi ekle</button>
           </div>
         </div>
         <div class="card">
           <div class="card-title"><span class="icon-tile tile-tg"><svg class="ico"><use href="#i-tg"/></svg></span><h3>Telegram'dan ekle</h3></div>
           <div class="form-row" style="flex-direction:column;">
-            <input id="cust-tg-name" placeholder="Isim" />
-            <button id="cust-tg-add-btn">Telegram Musterisi Ekle</button>
+            <input id="cust-tg-name" placeholder="İsim" />
+            <button id="cust-tg-add-btn">Telegram müşterisi ekle</button>
           </div>
-          <p class="muted small">Eklendikten sonra listede musterinin yaninda bir baglama kodu gorursun. Musterinin Telegram botuna <code>/start &lt;kod&gt;</code> yazmasi gerekir.</p>
+          <p class="muted small">Eklendikten sonra listede müşterinin yanında bir bağlama kodu görürsün. Müşterinin Telegram botuna <code>/start &lt;kod&gt;</code> yazması gerekir.</p>
         </div>
       </div>
       <div class="card">
-        <h3>Musteri Listesi</h3>
+        <h3>Müşteri listesi</h3>
         <div class="table-wrap"><table class="table" id="customers-table">
-          <thead><tr><th>Isim</th><th>Gonderilen kategoriler</th><th>WhatsApp</th><th>Telegram</th><th>Platform</th><th>Aktif</th><th>Telegram baglama kodu</th><th></th></tr></thead>
+          <thead><tr><th>İsim</th><th>Gönderilen kategoriler</th><th>WhatsApp</th><th>Telegram</th><th>Platform</th><th>Aktif</th><th>Telegram bağlama kodu</th><th></th></tr></thead>
           <tbody></tbody>
         </table></div>
       </div>
@@ -143,18 +143,18 @@
     <section id="tab-schedule" class="tab-panel" style="display:none;">
       <header class="page-head">
         <div>
-          <p class="eyebrow">Akis</p>
+          <p class="eyebrow">Akış</p>
           <h2>Otomasyon</h2>
-          <p class="muted">Once fotograflarini yukle, sonra her zaman dilimi icin saat, musteri sayisi ve gonderim sirasini kur.</p>
+          <p class="muted">Önce fotoğraflarını yükle, sonra her zaman dilimi için saat, müşteri sayısı ve gönderim sırasını kur.</p>
         </div>
       </header>
 
       <div class="card">
-        <h3 class="section-title"><span class="step-badge">1</span>Fotograf yukle</h3>
+        <h3 class="section-title"><span class="step-badge">1</span>Fotoğraf yükle</h3>
         <input id="photo-input" type="file" multiple accept="image/*" />
-        <input id="photo-categories" type="text" placeholder="Kategoriler (virgulle ayir, orn: Pantolon, Sweat, Ceket)" style="width:100%; margin-top:8px;" />
-        <p class="muted small">Yazdigin kategoriler yoksa otomatik olusturulur. Bos birakirsan fotograflar kategorisiz yuklenir (her adimda secilebilir).</p>
-        <button id="photo-upload-btn">Yukle</button>
+        <input id="photo-categories" type="text" placeholder="Kategoriler (virgülle ayır, örn: Pantolon, Sweat, Ceket)" style="width:100%; margin-top:8px;" />
+        <p class="muted small">Yazdığın kategoriler yoksa otomatik oluşturulur. Boş bırakırsan fotoğraflar kategorisiz yüklenir (her adımda seçilebilir).</p>
+        <button id="photo-upload-btn">Yükle</button>
         <div id="photo-upload-result" class="muted small"></div>
       </div>
       <div class="card">
@@ -162,28 +162,28 @@
         <div id="categories-list" class="list"></div>
       </div>
       <div class="card">
-        <h3>Arsivler</h3>
+        <h3>Arşivler</h3>
         <div class="table-wrap"><table class="table" id="batches-table">
-          <thead><tr><th>ID</th><th>Etiket</th><th>Durum</th><th>Fotograf</th><th>Olusturma</th></tr></thead>
+          <thead><tr><th>ID</th><th>Etiket</th><th>Durum</th><th>Fotoğraf</th><th>Oluşturma</th></tr></thead>
           <tbody></tbody>
         </table></div>
       </div>
 
-      <h3 class="section-title"><span class="step-badge">2</span>Zamanlama ve gonderim sirasi</h3>
+      <h3 class="section-title"><span class="step-badge">2</span>Zamanlama ve gönderim sırası</h3>
       <div class="card" id="slots-card"></div>
     </section>
 
     <section id="tab-captions" class="tab-panel" style="display:none;">
       <header class="page-head">
         <div>
-          <p class="eyebrow">Iletisim</p>
+          <p class="eyebrow">İletişim</p>
           <h2>Mesajlar</h2>
-          <p class="muted">Mesaj sablonlari, canli onizleme ve fotografsiz toplu mesaj.</p>
+          <p class="muted">Mesaj şablonları, canlı önizleme ve fotoğrafsız toplu mesaj.</p>
         </div>
       </header>
       <div class="grid">
         <div class="card">
-          <h3>WhatsApp Mesajlari</h3>
+          <h3>WhatsApp mesajları</h3>
           <div class="form-row">
             <input id="cap-wa-text" placeholder="Yeni mesaj metni" />
             <button id="cap-wa-add">Ekle</button>
@@ -191,7 +191,7 @@
           <ul id="cap-wa-list" class="list"></ul>
         </div>
         <div class="card">
-          <h3>Telegram Mesajlari</h3>
+          <h3>Telegram mesajları</h3>
           <div class="form-row">
             <input id="cap-tg-text" placeholder="Yeni mesaj metni" />
             <button id="cap-tg-add">Ekle</button>
@@ -201,8 +201,8 @@
       </div>
 
       <div class="card">
-        <h3>Onizleme (Simulasyon)</h3>
-        <p class="muted small">Gercek gonderim yapilmaz. Su an yuklu olan ilk fotograf ve rastgele secilen bir mesaj sablonu ile nasil gorunecegini gosterir.</p>
+        <h3>Önizleme (simülasyon)</h3>
+        <p class="muted small">Gerçek gönderim yapılmaz. Şu an yüklü olan ilk fotoğraf ve rastgele seçilen bir mesaj şablonu ile nasıl görüneceğini gösterir.</p>
         <div class="grid">
           <div>
             <p class="muted small">WhatsApp</p>
@@ -216,8 +216,8 @@
       </div>
 
       <div class="card">
-        <h3>Toplu Mesaj Gonder (Fotografsiz)</h3>
-        <p class="muted small">Zamanlamadan bagimsiz, istedigin an secilen musterilere sadece metin mesaji gonderir. Ayni gecikme ve gunluk limit ayarlarina uyar.</p>
+        <h3>Toplu mesaj gönder (fotoğrafsız)</h3>
+        <p class="muted small">Zamanlamadan bağımsız, istediğin an seçilen müşterilere sadece metin mesajı gönderir. Aynı gecikme ve günlük limit ayarlarına uyar.</p>
         <div class="form-grid">
           <label>Platform
             <select id="bc-platform">
@@ -231,12 +231,12 @@
         <div class="card" style="margin-top:10px;">
           <label class="small" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
             <input type="checkbox" id="bc-select-all" />
-            <strong>Tum Musteriler</strong>
+            <strong>Tüm müşteriler</strong>
           </label>
-          <p class="muted small">Isaretlersen platforma uygun TUM aktif musterilere gonderilir. Isaretlemezsen asagidan tek tek secersin.</p>
+          <p class="muted small">İşaretlersen platforma uygun TÜM aktif müşterilere gönderilir. İşaretlemezsen aşağıdan tek tek seçersin.</p>
           <div id="bc-customers" class="list" style="max-height:220px; overflow:auto;"></div>
         </div>
-        <button id="bc-send-btn" style="margin-top:10px;">Gonder</button>
+        <button id="bc-send-btn" style="margin-top:10px;">Gönder</button>
         <div id="bc-result" class="muted small"></div>
       </div>
     </section>
@@ -244,13 +244,13 @@
     <section id="tab-settings" class="tab-panel" style="display:none;">
       <header class="page-head">
         <div>
-          <p class="eyebrow">Yapilandirma</p>
+          <p class="eyebrow">Yapılandırma</p>
           <h2>Ayarlar</h2>
           <p class="muted">Gecikmeler, limitler ve bildirimler.</p>
         </div>
       </header>
       <div class="card">
-        <h3>Gonderim Ayarlari</h3>
+        <h3>Gönderim ayarları</h3>
         <div class="form-grid" id="settings-form"></div>
         <button id="settings-save-btn">Kaydet</button>
         <div id="settings-save-result" class="muted small"></div>
