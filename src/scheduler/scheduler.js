@@ -16,6 +16,7 @@ function start() {
   cron.schedule('* * * * *', async () => {
     const nowHHMM = currentHHMM();
     if (nowHHMM === lastTriggeredMinute) return;
+    if (!campaignService.isAutomationEnabled()) return;
 
     const slots = db.prepare('SELECT * FROM slots WHERE enabled = 1 AND time = ?').all(nowHHMM);
     if (!slots.length) return;

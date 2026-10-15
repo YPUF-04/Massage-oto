@@ -80,7 +80,40 @@ textarea { min-height: auto; resize: vertical; }
 input::placeholder, textarea::placeholder { color: #5f5850; }
 input:hover, select:hover, textarea:hover { border-color: var(--line-2); }
 input:focus, select:focus, textarea:focus { outline: none; border-color: var(--gold); }
-input[type="checkbox"] { min-height: auto; width: 17px; height: 17px; padding: 0; accent-color: var(--gold); cursor: pointer; }
+/* Tum onay kutulari kaydirmali anahtar (switch) olarak gorunur */
+input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none;
+  position: relative; flex-shrink: 0;
+  width: 38px; height: 22px; min-height: 22px; padding: 0; margin: 0;
+  border: 1px solid var(--line); border-radius: 999px;
+  background: var(--bg); cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+input[type="checkbox"]::after {
+  content: ""; position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+input[type="checkbox"]:checked { background: var(--ivory); border-color: var(--ivory); }
+input[type="checkbox"]:checked::after { transform: translateX(16px); background: #141210; }
+input[type="checkbox"]:disabled { opacity: 0.5; cursor: wait; }
+input[type="checkbox"]:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* Ana anahtar (sol menu / mobil ust bar) */
+.master-switch {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--line); background: var(--surface); cursor: pointer;
+}
+.master-switch input[type="checkbox"] { width: 46px; height: 26px; min-height: 26px; }
+.master-switch input[type="checkbox"]::after { width: 20px; height: 20px; }
+.master-switch input[type="checkbox"]:checked::after { transform: translateX(20px); }
+.master-text { display: flex; flex-direction: column; line-height: 1.2; }
+.master-title { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.master-state { font-size: 14px; font-weight: 600; color: var(--ivory); }
+body.automation-off .master-switch { border-color: rgba(217, 142, 134, 0.5); }
+body.automation-off .master-state { color: var(--danger); }
 input[type="file"] { padding: 7px; cursor: pointer; color: var(--muted); }
 input[type="file"]::file-selector-button {
   font: inherit; font-weight: 600; font-size: 13px;
@@ -126,7 +159,7 @@ button.danger:hover { background: var(--danger-soft); }
 .login-box p { margin: 0; }
 
 /* ---------- Marka ---------- */
-.brand { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 15px; letter-spacing: 0.02em; color: var(--ivory); padding: 2px 6px; }
+.brand { display: flex; align-items: center; gap: 12px; white-space: nowrap; font-weight: 600; font-size: 15px; letter-spacing: 0.02em; color: var(--ivory); padding: 2px 6px; }
 .brand-lg { padding: 0; }
 .brand-mark {
   width: 34px; height: 34px; border-radius: 10px;
@@ -332,6 +365,8 @@ main { padding: 44px 48px 72px; max-width: 1200px; width: 100%; min-width: 0; }
     border-right: none; border-bottom: 1px solid var(--line);
   }
   .brand { flex: 1; }
+  .master-switch { padding: 6px 10px; gap: 8px; }
+  .master-title { display: none; }
   #logout-btn { min-height: 36px; padding: 6px 12px; }
   .tabs { order: 3; flex-basis: 100%; flex-direction: row; overflow-x: auto; gap: 4px; scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }

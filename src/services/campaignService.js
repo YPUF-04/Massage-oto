@@ -37,6 +37,17 @@ function cancelRun(runId) {
   cancelledRuns.add(runId);
   return true;
 }
+// Ana anahtar: kapaliysa zamanlanmis gonderimler baslamaz.
+function isAutomationEnabled() {
+  return settingsService.get('automation_enabled', 'true') !== 'false';
+}
+
+// Ana anahtar kapatilinca o an calisan tum gonderimleri durdurur.
+function cancelAllRuns() {
+  for (const runId of activeRuns) cancelledRuns.add(runId);
+  return activeRuns.size;
+}
+
 function isRunActive(runId) {
   return activeRuns.has(runId);
 }
@@ -415,6 +426,9 @@ function runSlot(slotName, { manual = false } = {}) {
   if (!slot.enabled && !manual) {
     return { skipped: true, reason: 'slot devre disi' };
   }
+  if (!isAutomationEnabled() && !manual) {
+    return { skipped: true, reason: 'otomasyon durduruldu' };
+  }
 
   const runInfo = db.prepare("INSERT INTO run_log (slot_name, kind, started_at) VALUES (?, 'slot', datetime('now'))").run(slotName);
   const runId = runInfo.lastInsertRowid;
@@ -606,5 +620,7 @@ module.exports = {
   countDistinctCustomersToday,
   dailyCapFor,
   cancelRun,
+  cancelAllRuns,
+  isAutomationEnabled,
   isRunActive
 };

@@ -87,6 +87,9 @@ function initApp() {
 
   document.getElementById('settings-save-btn').addEventListener('click', saveSettings);
 
+  document.getElementById('automation-toggle').addEventListener('change', toggleAutomation);
+  api.get('/api/automation').then((r) => renderAutomation(r.enabled)).catch(() => {});
+
   switchTab('dashboard');
   setInterval(() => { if (currentTab === 'dashboard') loadDashboard(); }, 3000);
 }
@@ -107,9 +110,34 @@ function refreshCurrentTab() {
   if (currentTab === 'settings') loadSettings();
 }
 
+// ---------- Ana anahtar (otomasyon durdur / baslat) ----------
+function renderAutomation(enabled) {
+  document.getElementById('automation-toggle').checked = enabled;
+  document.getElementById('automation-label').textContent = enabled ? 'Açık' : 'Durduruldu';
+  document.body.classList.toggle('automation-off', !enabled);
+}
+
+async function toggleAutomation(e) {
+  const toggle = e.target;
+  const enabled = toggle.checked;
+  toggle.disabled = true;
+  try {
+    const r = await api.post('/api/automation', { enabled });
+    renderAutomation(r.enabled);
+    if (r.stopped > 0) alert(`Otomasyon durduruldu. Çalışan ${r.stopped} gönderim iptal edildi.`);
+  } catch (err) {
+    renderAutomation(!enabled);
+    alert(err.message);
+  } finally {
+    toggle.disabled = false;
+  }
+  refreshCurrentTab();
+}
+
 // ---------- Dashboard ----------
 async function loadDashboard() {
   const s = await api.get('/api/status');
+  renderAutomation(s.automationEnabled);
 
   const waBox = document.getElementById('wa-status');
   const waPill = s.whatsapp.status === 'connected' ? 'ok' : s.whatsapp.status === 'qr' ? 'warn' : 'bad';

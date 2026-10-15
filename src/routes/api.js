@@ -28,6 +28,7 @@ router.get('/status', (req, res) => {
   res.json({
     whatsapp: whatsapp.getStatus(),
     telegram: telegram.getStatus(),
+    automationEnabled: campaignService.isAutomationEnabled(),
     warmupActive: campaignService.isWarmupActive(),
     sentToday: {
       whatsapp: campaignService.countDistinctCustomersToday('whatsapp'),
@@ -51,6 +52,18 @@ router.post('/runs/:id/cancel', (req, res) => {
   const ok = campaignService.cancelRun(runId);
   if (!ok) return res.status(400).json({ error: 'Bu çalışma zaten bitmiş veya bulunamadı' });
   res.json({ ok: true });
+});
+
+// --- Ana anahtar: otomasyonu tek tusla durdur / baslat ---
+router.get('/automation', (req, res) => {
+  res.json({ enabled: campaignService.isAutomationEnabled() });
+});
+
+router.post('/automation', (req, res) => {
+  const enabled = !!(req.body && req.body.enabled);
+  settingsService.set('automation_enabled', enabled ? 'true' : 'false');
+  const stopped = enabled ? 0 : campaignService.cancelAllRuns();
+  res.json({ enabled, stopped });
 });
 
 function finiteOrNull(n) {
