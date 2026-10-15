@@ -38,10 +38,17 @@ function update(id, fields) {
   return get(id);
 }
 
-function remove(id) {
+// Musteriye bagli tum kayitlari (foto, mesaj, ilerleme) birlikte siler.
+// Biri eksik kalirsa foreign key hatasi verir ve musteri silinmez.
+const removeTx = db.transaction((id) => {
   db.prepare('DELETE FROM customer_batch_progress WHERE customer_id = ?').run(id);
   db.prepare('DELETE FROM sent_log WHERE customer_id = ?').run(id);
+  db.prepare('DELETE FROM message_log WHERE customer_id = ?').run(id);
   db.prepare('DELETE FROM customers WHERE id = ?').run(id);
+});
+
+function remove(id) {
+  removeTx(id);
 }
 
 function setTelegramChatId(linkCode, chatId) {

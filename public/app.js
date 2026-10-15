@@ -347,7 +347,11 @@ async function loadCustomers() {
   document.querySelectorAll('[data-del]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       if (!confirm('Müşteri silinsin mi?')) return;
-      await api.del(`/api/customers/${btn.dataset.del}`);
+      try {
+        await api.del(`/api/customers/${btn.dataset.del}`);
+      } catch (e) {
+        alert(e.message);
+      }
       loadCustomers();
     });
   });

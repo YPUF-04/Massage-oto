@@ -173,8 +173,12 @@ router.put('/customers/:id', (req, res) => {
 });
 
 router.delete('/customers/:id', (req, res) => {
-  customerService.remove(req.params.id);
-  res.json({ ok: true });
+  try {
+    customerService.remove(req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: `Müşteri silinemedi: ${e.message}` });
+  }
 });
 
 // --- Photos ---
