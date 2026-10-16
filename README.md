@@ -180,3 +180,19 @@ src/
   scheduler/scheduler.js     Dakikada bir slot saatlerini kontrol eden zamanlayici
 public/                    Admin paneli (vanilla HTML/CSS/JS)
 ```
+
+## SharedMind baglantisi
+
+```
+SharedMind (AI paneli) ──Bearer SERVICE_TOKEN──▶ Mesaj Botu /api/...
+```
+
+| Acik (SharedMind yapabilir) | Kapali (sadece bu panel) |
+|---|---|
+| Durumu ve son calismalari gormek | Musteri ekleme/silme |
+| Bir slotu simdi calistirmak | Fotograf yukleme |
+| Otomasyonu durdurmak/baslatmak | Ayarlar, mesaj sablonlari |
+| Devam eden calismayi iptal etmek | Toplu mesaj, WhatsApp cikis |
+
+- Botta `SERVICE_TOKEN` degiskenini gir (en az 32 karakter).
+- SharedMind'da `MESSAGE_BOT_TOKEN` = ayni deger, `MESSAGE_BOT_URL` = botun adresi.

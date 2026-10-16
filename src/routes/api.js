@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 
 const { requireAuth, login, logout, sessionStatus } = require('../auth/auth');
+const { serviceAuth } = require('../auth/serviceAuth');
 const settingsService = require('../services/settingsService');
 const customerService = require('../services/customerService');
 const photoService = require('../services/photoService');
@@ -20,6 +21,7 @@ router.post('/login', login);
 router.post('/logout', logout);
 router.get('/session', sessionStatus);
 
+router.use(serviceAuth);
 router.use(requireAuth);
 
 // --- Dashboard / status ---
@@ -108,6 +110,8 @@ router.post('/settings', (req, res) => {
   if (settings) settingsService.setMany(settings);
   res.json({ ok: true });
 });
+
+router.get('/slots', (req, res) => res.json(settingsService.getSlots()));
 
 router.put('/slots/:name', (req, res) => {
   settingsService.updateSlot(req.params.name, req.body || {});
