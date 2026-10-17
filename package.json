@@ -1,0 +1,25 @@
+{
+  "name": "massage-oto",
+  "version": "1.0.0",
+  "description": "WhatsApp ve Telegram uzerinden musterilere otomatik, rastgele fotograf gonderim otomasyonu",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.22",
+    "better-sqlite3": "^11.3.0",
+    "cookie-session": "^2.1.0",
+    "express": "^4.21.0",
+    "multer": "^2.0.0",
+    "node-cron": "^4.1.0",
+    "pino": "^9.4.0",
+    "qrcode": "^1.5.4"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
